@@ -16,7 +16,6 @@ enum LuaToken {
 	TSemicolon;
 	TBkOpen;
 	TBkClose;
-	TQuestion;
 	TDoubleDot;
 }
 
@@ -48,12 +47,13 @@ enum LuaExprDef {
 	ETd(ae:Array<LuaExpr>);
 	EAnd(ae:Array<LuaExpr>);
 	EIf(cond:LuaExpr, body:LuaExpr, ?eis:Array<LuaElseIf>, ?eel:LuaExpr);
+	ERepeat(body:LuaExpr, cond:LuaExpr);
 	EWhile(cond:LuaExpr, e:LuaExpr);
 	EForNum(v:String, body:LuaExpr, start:LuaExpr, end:LuaExpr, ?step:LuaExpr);
 	EForGen(body:LuaExpr, iterator:LuaExpr, k:String, ?v:String);
 	EBreak;
 	EContinue;
-	EFunction(args:Array<String>, e:LuaExpr, ?names:Array<{var name:String; var isDouble:Bool;}>);
+	EFunction(args:Array<String>, e:LuaExpr, ?names:Array<{var name:String; var ?isDouble:Bool;}>);
 	EIgnore;
 	EReturn(?e:LuaExpr);
 	EArray(e:LuaExpr, index:LuaExpr);
@@ -62,7 +62,7 @@ enum LuaExprDef {
 
 class LuaParser {
 	private static final logicOperators:Array<String> = ["and", "or", "not"];
-	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "end"];
+	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "repeat", "until", "end"];
 
 	var content:String;
 
@@ -126,7 +126,7 @@ class LuaParser {
 			push(tk);
 			parseFullExpr(a);
 		}
-		return mk(EFunction([], mk(ETd(a), 1)), 1);
+		return mk(EFunction([], mk(ETd(a), 1), [{name: "main"}]), 1);
 	}
 
 	function getIdent():String {
@@ -219,7 +219,20 @@ class LuaParser {
 					case _:
 						unexpected(tk);
 				}
-			case TOp(op) if(opPriority.get(op) < 0):
+			case TOp(op) if(opPriority.get(op) < 0 || op == "-"):
+				if(op == "-") {
+					var e = parseExpr();
+					if( e == null )
+						return makePrefix(op,e);
+					switch(e.expr) {
+						case EConst(CInt(i)):
+							return mk(EConst(CInt(-i)));
+						case EConst(CFloat(f)):
+							return mk(EConst(CFloat(-f)));
+						default:
+							return makePrefix(op,e);
+					}
+				}
 				return makePrefix(op,parseExpr());
 			case TBrOpen:
 				parseNextExpr(parseObject());
@@ -304,13 +317,20 @@ class LuaParser {
 		return switch(id) {
 			case "return":
 				var t = token();
-				if(Type.enumEq(t, TId("end")) || t == TSemicolon) {
-					push(t);
+				push(t);
+				if(Type.enumEq(t, TId("until")) || Type.enumEq(t, TId("end")) || t == TSemicolon) {
 					return mk(EReturn(null));
 				}
-				push(t);
 
 				mk(EReturn(parseExpr(true)));
+			case "require":
+				var t = token();
+				push(t);
+				if(t.match(TConst(CString(_)))) {
+					var arg = parseExpr();
+					return mk(ECall(mk(EIdent("require")), [arg]));
+				}
+				mk(EIdent(id));
 			case "continue":
 				mk(EContinue);
 			case "break":
@@ -384,6 +404,12 @@ class LuaParser {
 					if(k == null) mk(EForGen(body, iterator_func, v));
 					else mk(EForGen(body, iterator_func, k, v));
 				}
+			case "repeat":
+				var body = parseTd(["until"], false, false);
+				ensure(TPOpen);
+				var cond = parseExpr();
+				ensure(TPClose);
+				mk(ERepeat(body, cond));
 			case "while":
 				var cond = parseExpr();
 				ensure(TId("do"));
@@ -424,7 +450,7 @@ class LuaParser {
 		}
 	}
 
-	function parseTd(?utils:Array<String>, ?fudai:Bool = true):LuaExpr {
+	function parseTd(?utils:Array<String>, ?fudai:Bool = true, ?cEnd:Bool = true):LuaExpr {
 		utils = utils ?? [];
 		var ae:Array<LuaExpr> = [];
 		while(true) {
@@ -436,7 +462,7 @@ class LuaParser {
 				}
 				pre;
 			};
-			if(cond || Type.enumEq(t, TId("end")) || t == TEof) {
+			if(cond || (cEnd && Type.enumEq(t, TId("end"))) || t == TEof) {
 				if(t == TEof) unexpected(t);
 				if(fudai) push(t);
 				break;
@@ -499,8 +525,8 @@ class LuaParser {
 		var b = new StringBuf();
 		var esc = false;
 		while( true ) {
-			var c = readPos();
-			if( StringTools.isEof(c) ) {
+			c = readPos();
+			if( StringTools.isEof(c) || c == 10) {
 				error(EUnterminatedString(c));
 				break;
 			}
@@ -529,9 +555,7 @@ class LuaParser {
 					case "'".code, '"'.code, '\\'.code: b.addChar(c);
 					default: error(EUnterminatedString(c));
 				}
-			} else if(c == 10)
-				error(EUnterminatedString(c));
-			else if( c == 92 )
+			} else if( c == 92 )
 				esc = true;
 			else if( c == until )
 				break;
@@ -540,6 +564,39 @@ class LuaParser {
 			}
 		}
 		return b.toString();
+	}
+
+	function niubierlyReadString(i:Int = 0) {
+		var buf = new StringBuf();
+		var c = 0;
+		while(true) {
+			c = readPos();
+			if(StringTools.isEof(c)) {
+				error(EUnterminatedString(c));
+				break;
+			}
+			if(c == "]".code) {
+				var nd = readPos();
+				if(nd == "=".code && i > 0) {
+					var cond = true;
+					final old = pos;
+					for(i in 0...i) {
+						if(nd != "=".code) {
+							cond = false;
+							break;
+						}
+						nd = readPos();
+					}
+					if(cond && nd == "]".code) break;
+					pos = old;
+				} else if(nd == "]".code) {
+					break;
+				}
+				pos--;
+			}
+			buf.addChar(c);
+		}
+		return buf.toString();
 	}
 
 	inline function readPos():Int {
@@ -580,33 +637,32 @@ class LuaParser {
 					pos--;
 					TOp("=");
 				}
-			case "+".code:
-				TOp("+");
+			case "+".code, "*".code, "%".code, "^".code, "#".code:
+				TOp(String.fromCharCode(char));
 			case "-".code:
 				char = readPos();
 				if(char == "-".code) {
-					sayComment();
-				} else if(inNumber(char)) {
-					var n = "-" + String.fromCharCode(char);
-					var isFloat = false;
-					while(true) {
-						if(!inNumber(char = readPos()) && (isFloat || char != ".".code)) {
-							if(inLetter(char) || inDownLine(char) || char == ".".code) {
-								error(EUnexpected(String.fromCharCode(char)));
+					char = readPos();
+					final old = pos;
+					if(char == "[".code) {
+						char = readPos();
+						if(char == "=".code) {
+							var i = 1;
+							while((char = readPos()) == "=".code) {
+								i++;
 							}
-							pos--;
-							break;
+							if(char == "[".code) {
+								pos = old;
+								return sayComment(i);
+							}
 						}
-						if(!isFloat && char == ".".code) isFloat = true;
-						n += String.fromCharCode(char);
 					}
-					TConst(if(isFloat) CFloat(Std.parseFloat(n)) else CInt(Std.parseInt(n)));
+					pos = old;
+					sayComment();
 				} else {
 					pos--;
 					TOp("-");
 				}
-			case "*".code:
-				TOp("*");
 			case "/".code:
 				char = readPos();
 				if(char == "/".code) {
@@ -615,10 +671,6 @@ class LuaParser {
 					pos--;
 					TOp("/");
 				}
-			case "%".code:
-				TOp("%");
-			case "^".code:
-				TOp("^");
 			case "~".code:
 				char = readPos();
 				if(char == "=".code) {
@@ -642,8 +694,6 @@ class LuaParser {
 					pos--;
 					TOp("<");
 				}
-			case "#".code:
-				TOp("#");
 			case ".".code:
 				char = readPos();
 				if(inNumber(char)) {
@@ -678,6 +728,17 @@ class LuaParser {
 			case "}".code:
 				TBrClose;
 			case "[".code:
+				char = readPos();
+				if(char == "=".code) {
+					var i = 1;
+					while((char = readPos()) == "=".code) {
+						i++;
+					}
+					if(char == "[".code) {
+						return TConst(CString(niubierlyReadString(i)));
+					} else pos -= i;
+				} else if(char == "[".code) return TConst(CString(niubierlyReadString()));
+				pos--;
 				TBkOpen;
 			case "]".code:
 				TBkClose;
@@ -724,10 +785,10 @@ class LuaParser {
 		return _token;
 	}
 
-	function sayComment():LuaToken {
+	function sayComment(i:Int = 0):LuaToken {
 		var char = readPos();
 		var char1 = readPos();
-		if(char != "[".code || char1 != "[".code) {
+		if(i == 0 && (char != "[".code || char1 != "[".code)) {
 			pos -= 2;
 			while(true) {
 				if((char = readPos()) == 10 || StringTools.isEof(char)) {
@@ -739,12 +800,23 @@ class LuaParser {
 			while(true) {
 				char = readPos();
 				if(char == "]".code) {
-					char = readPos();
-					if(char == "]".code) {
+					var nd = readPos();
+					if(i > 0) {
+						var cond = true;
+						final old = pos;
+						for(i in 0...i) {
+							if(nd != "=".code) {
+								cond = false;
+								break;
+							}
+							nd = readPos();
+						}
+						if(cond && nd == "]".code) break;
+						pos = old;
+					} else if(nd == "]".code) {
 						break;
-					} else {
-						pos--;
 					}
+					pos--;
 				}
 				if(StringTools.isEof(char)) {
 					error(EUnterminatedComment);
@@ -797,7 +869,6 @@ class LuaParser {
 		case TSemicolon: ";";
 		case TBkOpen: "[";
 		case TBkClose: "]";
-		case TQuestion: "?";
 		case TDoubleDot: ":";
 		}
 	}
