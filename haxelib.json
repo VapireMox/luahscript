@@ -2,6 +2,7 @@
 	"name": "luahscript",
 	"description": "use hscript expression to make lua script",
 	"version": "0.0.1",
+	"tags": ["hscript", "lua", "script"],
 	"releasenote": "fp",
 	"url": "https://github.com/VapireMox/luahscript",
 	"contributors": [

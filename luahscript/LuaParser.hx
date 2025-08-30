@@ -22,7 +22,13 @@ enum LuaToken {
 enum LuaConst {
 	CInt(sb:Int);
 	CFloat(sb:Float);
-	CString(str:String);
+	CString(str:String, slk:StringLiteralKind);
+}
+
+enum StringLiteralKind {
+	DoubleQuotes;
+	SingleQuotes;
+	SquareBracket(count:Int);
 }
 
 typedef LuaExpr = {
@@ -174,7 +180,7 @@ class LuaParser {
 	function parseNextExpr(e1:LuaExpr):LuaExpr {
 		var tk = token();
 		switch(tk) {
-			case TOp(op) if(!commaAnd && opPriority.get(op) > -1):
+			case TOp(op) if((!commaAnd || op != "=") && opPriority.get(op) > -1):
 				return makeBinop(op, e1, parseExpr());
 			case TComma if(!commaAnd):
 				var ae = [e1];
@@ -268,7 +274,10 @@ class LuaParser {
 			return args;
 		push(tk);
 		while( true ) {
+			// 本来我是想直接解析EAnd来获取arg的，不过想了想算了（
+			commaAnd = true;
 			args.push(parseExpr());
+			commaAnd = false;
 			tk = token();
 			switch( tk ) {
 			case TComma:
@@ -326,7 +335,7 @@ class LuaParser {
 			case "require":
 				var t = token();
 				push(t);
-				if(t.match(TConst(CString(_)))) {
+				if(t.match(TConst(CString(_, _)))) {
 					var arg = parseExpr();
 					return mk(ECall(mk(EIdent("require")), [arg]));
 				}
@@ -628,7 +637,7 @@ class LuaParser {
 		var char = readPos();
 		_token = switch(char) {
 			case "\"".code:
-				TConst(CString(readString("\"".code)));
+				TConst(CString(readString("\"".code), DoubleQuotes));
 			case "=".code:
 				char = readPos();
 				if(char == "=".code) {
@@ -720,7 +729,7 @@ class LuaParser {
 			case ";".code:
 				TSemicolon;
 			case "'".code:
-				TConst(CString(readString("'".code)));
+				TConst(CString(readString("'".code), SingleQuotes));
 			case ":".code:
 				TDoubleDot;
 			case "{".code:
@@ -735,9 +744,9 @@ class LuaParser {
 						i++;
 					}
 					if(char == "[".code) {
-						return TConst(CString(niubierlyReadString(i)));
+						return TConst(CString(niubierlyReadString(i), SquareBracket(i)));
 					} else pos -= i;
-				} else if(char == "[".code) return TConst(CString(niubierlyReadString()));
+				} else if(char == "[".code) return TConst(CString(niubierlyReadString(), SquareBracket(0)));
 				pos--;
 				TBkOpen;
 			case "]".code:
@@ -850,7 +859,7 @@ class LuaParser {
 		return switch(c) {
 		case CInt(v): Std.string(v);
 		case CFloat(f): Std.string(f);
-		case CString(s): s;
+		case CString(s, _): s;
 		}
 	}
 
