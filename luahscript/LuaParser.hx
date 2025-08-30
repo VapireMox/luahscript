@@ -1,74 +1,12 @@
 package luahscript;
 
-import luahscript.LuaPrinter;
-
-enum LuaToken {
-	TEof;
-	TConst(c: LuaConst);
-	TId(s: String);
-	TOp(s: String);
-	TPOpen;
-	TPClose;
-	TBrOpen;
-	TBrClose;
-	TDot;
-	TComma;
-	TSemicolon;
-	TBkOpen;
-	TBkClose;
-	TDoubleDot;
-}
-
-enum LuaConst {
-	CInt(sb:Int);
-	CFloat(sb:Float);
-	CString(str:String, slk:StringLiteralKind);
-}
-
-enum StringLiteralKind {
-	DoubleQuotes;
-	SingleQuotes;
-	SquareBracket(count:Int);
-}
-
-typedef LuaExpr = {
-	var expr:LuaExprDef;
-	var line:Int;
-}
-
-typedef LuaElseIf = {
-	var cond:LuaExpr;
-	var body:LuaExpr;
-}
-
-enum LuaExprDef {
-	EConst(c:LuaConst);
-	EIdent(v:String);
-	EParent(e:LuaExpr);
-	EField(e:LuaExpr, f:String, ?isDouble:Bool);
-	ELocal(e:LuaExpr);
-	EBinop(op:String, e1:LuaExpr, e2:LuaExpr);
-	EPrefix(prefix:String, e:LuaExpr);
-	ECall(e:LuaExpr, params:Array<LuaExpr>);
-	ETd(ae:Array<LuaExpr>);
-	EAnd(ae:Array<LuaExpr>);
-	EIf(cond:LuaExpr, body:LuaExpr, ?eis:Array<LuaElseIf>, ?eel:LuaExpr);
-	ERepeat(body:LuaExpr, cond:LuaExpr);
-	EWhile(cond:LuaExpr, e:LuaExpr);
-	EForNum(v:String, body:LuaExpr, start:LuaExpr, end:LuaExpr, ?step:LuaExpr);
-	EForGen(body:LuaExpr, iterator:LuaExpr, k:String, ?v:String);
-	EBreak;
-	EContinue;
-	EFunction(args:Array<String>, e:LuaExpr, ?names:Array<{var name:String; var ?isDouble:Bool;}>);
-	EIgnore;
-	EReturn(?e:LuaExpr);
-	EArray(e:LuaExpr, index:LuaExpr);
-	EObject(fl:Array<{v: LuaExpr, ?key:LuaExpr}>);
-}
+import luahscript.exprs.LuaExpr;
+import luahscript.exprs.LuaError;
+import luahscript.exprs.*;
 
 class LuaParser {
 	private static final logicOperators:Array<String> = ["and", "or", "not"];
-	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "repeat", "until", "end"];
+	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "repeat", "until", "end", "true", "false", "nil"];
 
 	var content:String;
 
@@ -114,6 +52,8 @@ class LuaParser {
 	function initParser() {
 		commaAnd = false;
 		needCall = false;
+		inObject = false;
+		assignQuare = false;
 
 		saveVariables = [];
 		_tokens = [];
@@ -132,7 +72,7 @@ class LuaParser {
 			push(tk);
 			parseFullExpr(a);
 		}
-		return mk(EFunction([], mk(ETd(a), 1), [{name: "main"}]), 1);
+		return mk(EFunction([], mk(ETd(a), 1), {names: ["main"], isDouble: false}), 1);
 	}
 
 	function getIdent():String {
@@ -177,12 +117,28 @@ class LuaParser {
 		}
 	}
 
+	var assignQuare:Bool;
+	var inObject:Bool;
 	function parseNextExpr(e1:LuaExpr):LuaExpr {
 		var tk = token();
 		switch(tk) {
+			case TOp("=") if(inObject):
+				push(tk);
+				return e1;
+			case TOp("=") if(assignQuare):
+				//lua不允许多次赋值=，限制就摆在那儿
+				return unexpected(tk);
 			case TOp(op) if((!commaAnd || op != "=") && opPriority.get(op) > -1):
-				return makeBinop(op, e1, parseExpr());
-			case TComma if(!commaAnd):
+				var e2 = if(!assignQuare && op == "=") {
+					assignQuare = true;
+					var e = parseExpr();
+					assignQuare = false;
+					e;
+				} else {
+					parseExpr();
+				}
+				return makeBinop(op, e1, e2);
+			case TComma if(!commaAnd && !inObject):
 				var ae = [e1];
 				push(tk);
 				commaAnd = true;
@@ -194,6 +150,21 @@ class LuaParser {
 				if(tk == TDoubleDot) needCall = true;
 				return parseNextExpr(mk(EField(e1,field, tk == TDoubleDot)));
 			case TPOpen:
+				var retional = false;
+				LuaTools.recursion(e1, function(e) {
+					switch(e.expr) {
+						case EIdent(_):
+							retional = true;
+						case EField(_, _):
+							retional = true;
+						case EFunction(_, _):
+							retional = true;
+						case EArray(_, _):
+							retional = true;
+						case _:
+					}
+				});
+				if(!retional) return unexpected(tk);
 				needCall = false;
 				return parseNextExpr(mk(ECall(e1,parseExprList(TPClose))));
 			case TBkOpen:
@@ -210,14 +181,19 @@ class LuaParser {
 	function parseExpr(?getValue:Bool = false):LuaExpr {
 		var tk = token();
 		return switch(tk) {
+			case TId(id) if(id == "true" || id == "false" || id == "nil"):
+				return parseNextExpr(mk(EIdent(id)));
 			case TId(id) if(getValue && (!logicOperators.contains(id) && !keywords.contains(id))):
 				parseNextExpr(parseIdent(id));
 			case TId(id) if(!getValue):
-				parseNextExpr(parseIdent(id));
+				if(logicOperators.contains(id) || keywords.contains(id)) parseIdent(id);
+				else parseNextExpr(parseIdent(id));
 			case TConst(c):
 				parseNextExpr(mk(EConst(c)));
 			case TPOpen:
+				commaAnd = true;
 				var e = parseExpr();
+				commaAnd = false;
 				tk = token();
 				switch( tk ) {
 					case TPClose:
@@ -241,7 +217,7 @@ class LuaParser {
 				}
 				return makePrefix(op,parseExpr());
 			case TBrOpen:
-				parseNextExpr(parseObject());
+				parseObject();
 			case _:
 				unexpected(tk);
 		};
@@ -301,7 +277,7 @@ class LuaParser {
 				case TSemicolon:
 					push(tk);
 					break;
-				case TId(id) if(logicOperators.contains(id) || keywords.contains(id)):
+				case TId(id):
 					push(tk);
 					break;
 				case TOp(op):
@@ -348,8 +324,28 @@ class LuaParser {
 				var t = token();
 				switch(t) {
 					case TId(id) if(!logicOperators.contains(id) && !keywords.contains(id)):
-						push(t);
-						mk(ELocal(parseExpr()));
+						var idents = [id];
+						while( true ) {
+							var tk = token();
+							switch( tk ) {
+								case TComma:
+									idents.push(getIdent());
+								case TEof, TSemicolon:
+									push(tk);
+									break;
+								case TId(id):
+									push(tk);
+									break;
+								case TOp(op):
+									push(tk);
+									break;
+								default:
+									unexpected(tk);
+									break;
+							}
+						}
+						if(idents.length > 1) parseNextExpr(mk(EAnd([for(id in idents) mk(EIdent(id))])));
+						else parseNextExpr(mk(EIdent(idents[0])));
 					case TId("function"):
 						push(t);
 						mk(ELocal(parseExpr()));
@@ -389,6 +385,7 @@ class LuaParser {
 			case "for":
 				var v = getIdent();
 				if(maybe(TOp("="))) {
+					commaAnd = true;
 					var start = parseExpr();
 					ensure(TComma);
 					var end = parseExpr();
@@ -396,6 +393,7 @@ class LuaParser {
 					if(maybe(TComma)) {
 						step = parseExpr();
 					}
+					commaAnd = false;
 					ensure(TId("do"));
 					var body = parseTd(false);
 					mk(EForNum(v, body, start, end, step));
@@ -425,13 +423,19 @@ class LuaParser {
 				var body = parseTd(false);
 				mk(EWhile(cond, body));
 			case "function":
+				var isDouble:Bool = false;
 				function ik(ae) {
 					var t = token();
-					var isDouble = false;
 					switch(t) {
-						case TDot, TDoubleDot:
-							isDouble = t == TDoubleDot;
-							ae.push({name: getIdent(), isDouble: isDouble});
+						case TDot:
+							ae.push(getIdent());
+							ik(ae);
+						case TDoubleDot:
+							ae.push(getIdent());
+							t = token();
+							if(t != TPOpen) unexpected(t);
+							push(t);
+							isDouble = true;
 							ik(ae);
 						case TPOpen:
 						case _:
@@ -443,15 +447,16 @@ class LuaParser {
 				switch(t) {
 					case TId(id) if(logicOperators.contains(id) || keywords.contains(id)):
 						unexpected(t);
+					case TPOpen:
 					case _:
 						if(t != TEof) {
 							push(t);
-							names.push({name: getIdent(), isDouble: false});
+							names.push(getIdent());
+							ik(names);
 						}
 				}
-				ik(names);
 				var args = parseFunctionArgs();
-				mk(EFunction(args, parseTd(false), names));
+				mk(EFunction(args, parseTd(false), {names: names, isDouble: isDouble}));
 			case _ if(!keywords.contains(id) && !logicOperators.contains(id)):
 				mk(EIdent(id));
 			default:
@@ -489,14 +494,25 @@ class LuaParser {
 		var t = null;
 		while((t = token()) != TBrClose) {
 			push(t);
-			var kv = {key: null, v: null};
+			var kv = {key: null, v: null, haveBK: false};
 			if(maybe(TBkOpen)) {
+				kv.haveBK = true;
+				final oio = inObject;
+				inObject = true;
 				kv.key = parseExpr();
+				inObject = oio;
 				ensure(TBkClose);
 				ensure(TOp("="));
+
+				final oio = inObject;
+				inObject = true;
 				kv.v = parseExpr();
+				inObject = oio;
 			} else {
+				final oio = inObject;
+				inObject = true;
 				var e = parseExpr();
+				inObject = oio;
 				if(maybe(TOp("=")) && e.expr.match(EIdent(_))) {
 					kv.key = e;
 					kv.v = parseExpr();
@@ -517,7 +533,7 @@ class LuaParser {
 			kvs.push(kv);
 		}
 
-		return mk(EObject(kvs));
+		return mk(ETable(kvs));
 	}
 
 	function unexpected(t:LuaToken):Dynamic {
@@ -651,8 +667,8 @@ class LuaParser {
 			case "-".code:
 				char = readPos();
 				if(char == "-".code) {
-					char = readPos();
 					final old = pos;
+					char = readPos();
 					if(char == "[".code) {
 						char = readPos();
 						if(char == "=".code) {

@@ -1,5 +1,7 @@
 package luahscript;
 
+import luahscript.exprs.LuaError;
+
 class LuaPrinter {
 	public static function errorToString(e: LuaError, showPos: Bool = true) {
 		var message = switch (e.err) {
@@ -7,9 +9,10 @@ class LuaPrinter {
 			case EUnexpected(s): "expected symbol near '" + s + "'";
 			case EUnterminatedString(c): "unfinished string near '<\\" + (StringTools.isEof(c) ? "eof" : Std.string(c)) + ">'";
 			case EUnterminatedComment: "unfinished long comment near <eof>";
-			case ECallNilValue(v): "attempt to call a nil value (global '" + v + "' + )";
+			case ECallNilValue(v, type): "attempt to call a nil value" + (type != UNKNOWN ? " (" + type + " '" + v + "')" : "");
 			case EInvalidOp(op): "unexpected symbol near '" + op + "'";
-			case EInvalidAccess(f): "attempt to access a invalid value ('" + f + "')";
+			case EInvalidIterator(v): "attempt to call a invalid value (for iterator)";
+			case EInvalidAccess(f, type): "attempt to index a nil value" + (type != UNKNOWN ? " (" + type + " '" + f + "')" : "");
 			case ECustom(msg): msg;
 			default: "Unknown Error.";
 		};
@@ -18,30 +21,4 @@ class LuaPrinter {
 		else
 			return message;
 	}
-}
-
-class LuaError {
-	public var err: LuaErrorDef;
-	public var line: Int;
-
-	public function new(e:LuaErrorDef, line:Int) {
-		this.err = e;
-		this.line = line;
-	}
-
-	public function toString():String {
-		return LuaPrinter.errorToString(this);
-	}
-}
-
-enum LuaErrorDef
-{
-	EInvalidChar(c:Int);
-	EUnexpected(s:String);
-	EUnterminatedString(char:Int);
-	EUnterminatedComment;
-	ECallNilValue(id:String);
-	EInvalidOp(op:String);
-	EInvalidAccess(f:String);
-	ECustom(msg:String);
 }
