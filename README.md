@@ -1,6 +1,6 @@
 # Luahscript
-- Using hscript to parse lua script, currently only supports compilation formats and is still being developed
+- Using hscript to parse lua script, Currently still under development.
 
 - Currently, I have only tested the cpp compilation target without any issues
 ## Usage
-- 傻逼
+- 爱用不用
