@@ -119,7 +119,7 @@ class LuaParser {
 
 	var assignQuare:Bool;
 	var inObject:Bool;
-	function parseNextExpr(e1:LuaExpr):LuaExpr {
+	function parseNextExpr(e1:LuaExpr, nonAccess:Bool = false):LuaExpr {
 		var tk = token();
 		switch(tk) {
 			case TOp("=") if(inObject):
@@ -145,7 +145,7 @@ class LuaParser {
 				ae = ae.concat(parseExprAnds());
 				commaAnd = false;
 				return parseNextExpr(mk(EAnd(ae)));
-			case TDot, TDoubleDot:
+			case TDot, TDoubleDot if(!nonAccess):
 				var field = getIdent();
 				if(tk == TDoubleDot) needCall = true;
 				return parseNextExpr(mk(EField(e1,field, tk == TDoubleDot)));
@@ -183,7 +183,7 @@ class LuaParser {
 		return switch(tk) {
 			case TId(id) if(id == "true" || id == "false" || id == "nil"):
 				return parseNextExpr(mk(EIdent(id)));
-			case TId(id) if(getValue && (!logicOperators.contains(id) && !keywords.contains(id))):
+			case TId(id) if(getValue && (id == "function" || (!logicOperators.contains(id) && !keywords.contains(id)))):
 				parseNextExpr(parseIdent(id));
 			case TId(id) if(!getValue):
 				if(logicOperators.contains(id) || keywords.contains(id)) parseIdent(id);
@@ -201,6 +201,8 @@ class LuaParser {
 					case _:
 						unexpected(tk);
 				}
+			case TOp("..."):
+				return parseNextExpr(mk(EConst(CTripleDot)), true);
 			case TOp(op) if(opPriority.get(op) < 0 || op == "-"):
 				if(op == "-") {
 					var e = parseExpr();
@@ -230,7 +232,11 @@ class LuaParser {
 			return args;
 		push(tk);
 		while( true ) {
-			args.push(getIdent());
+			args.push(switch(tk = token()) {
+				case TId(id): id;
+				case TOp("..."): "...";
+				case _: unexpected(tk);
+			});
 			tk = token();
 			switch( tk ) {
 			case TComma:
@@ -413,9 +419,9 @@ class LuaParser {
 				}
 			case "repeat":
 				var body = parseTd(["until"], false, false);
-				ensure(TPOpen);
+				commaAnd = true;
 				var cond = parseExpr();
-				ensure(TPClose);
+				commaAnd = false;
 				mk(ERepeat(body, cond));
 			case "while":
 				var cond = parseExpr();
@@ -456,7 +462,11 @@ class LuaParser {
 						}
 				}
 				var args = parseFunctionArgs();
-				mk(EFunction(args, parseTd(false), {names: names, isDouble: isDouble}));
+				final oldInObject = inObject;
+				inObject = false;
+				final body = parseTd(false);
+				inObject = oldInObject;
+				mk(EFunction(args, body, {names: names, isDouble: isDouble}));
 			case _ if(!keywords.contains(id) && !logicOperators.contains(id)):
 				mk(EIdent(id));
 			default:
@@ -512,13 +522,13 @@ class LuaParser {
 				final oio = inObject;
 				inObject = true;
 				var e = parseExpr();
-				inObject = oio;
 				if(maybe(TOp("=")) && e.expr.match(EIdent(_))) {
 					kv.key = e;
 					kv.v = parseExpr();
 				} else {
 					kv.v = e;
 				}
+				inObject = oio;
 			}
 
 			var t = token();
@@ -735,7 +745,12 @@ class LuaParser {
 					}
 					TConst(CFloat(Std.parseFloat(n)));
 				} else if(char == ".".code) {
-					TOp("..");
+					if((char = readPos()) == ".".code) {
+						TOp("...");
+					} else {
+						pos--;
+						TOp("..");
+					}
 				} else {
 					pos--;
 					TDot;
@@ -856,7 +871,7 @@ class LuaParser {
 	}
 
 	inline static function inLetter(char:Int):Bool {
-		return (char >= 65 && char <= 90) || (char >= 97 && char <= 122);
+		return (char >= 65 && char <= 90) || (char >= 97 && char <= 122) || inDownLine(char);
 	}
 
 	inline static function inNumber(char:Int):Bool {
@@ -868,14 +883,15 @@ class LuaParser {
 	}
 
 	inline static function inLu(char:Int):Bool {
-		return inNumber(char) || inDownLine(char) || inLetter(char);
+		return inNumber(char) || inLetter(char);
 	}
 
 	inline static function constString(c:LuaConst):String {
 		return switch(c) {
-		case CInt(v): Std.string(v);
-		case CFloat(f): Std.string(f);
-		case CString(s, _): s;
+			case CInt(v): Std.string(v);
+			case CFloat(f): Std.string(f);
+			case CString(s, _): s;
+			case CTripleDot: "...";
 		}
 	}
 

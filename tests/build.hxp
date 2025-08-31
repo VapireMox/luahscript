@@ -1,0 +1,11 @@
+package;
+
+import hxp.HXML;
+
+class Build extends hxp.Script {
+	public function new() {
+		super();
+		var hxml = new HXML({main: "Main", libs: ["luahscript"], cpp: "export/cpp/", cmds: ["./export/cpp/Main"]});
+		hxml.build();
+	}
+}
