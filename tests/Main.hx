@@ -6,7 +6,7 @@ import luahscript.exprs.LuaExpr;
 
 class Main {
 	public static function main() {
-		var e = new LuaParser().parseFromString(sys.io.File.getContent("/storage/emulated/0/haxe/luahscript/test.lua"));
+		var e = new LuaParser().parseFromString(sys.io.File.getContent("../test.lua"));
 		trace(e);
 		var interp = new LuaInterp();
 		final f = interp.execute(e);
