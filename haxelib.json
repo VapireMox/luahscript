@@ -1,12 +1,13 @@
 {
 	"name": "luahscript",
 	"description": "use hscript expression to make lua script",
-	"version": "0.0.1",
+	"version": "0.0.2-pre1",
 	"tags": ["hscript", "lua", "scripting"],
-	"releasenote": "Completion rate of 80%",
+	"releasenote": "Completion rate of 81%, fix some issues, will add lua-libs",
 	"license": "Apache",
 	"url": "https://github.com/VapireMox/luahscript",
 	"contributors": [
+		//哈基a你不能创个haxelib的号吗？
 		"GeXie19"
 	]
 }

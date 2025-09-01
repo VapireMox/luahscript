@@ -354,6 +354,10 @@ Luahscript supports a subset of Lua features, including:
 - Tables and metatables
 - Basic error handling
 
+## About on "require"
+- In Lua，"require" function is used to import modules (Lua files) and allows access to modify the global variables of the modules.
+- But in this lib, it only supports expressions, and you need to manually set the "require" function in "globals"
+
 ## Limitations
 
 While Luahscript provides a good subset of Lua functionality, there are some limitations:
