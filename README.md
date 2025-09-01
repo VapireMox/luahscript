@@ -15,6 +15,13 @@ Luahscript is a Haxe library that uses hscript to parse and execute Lua scripts.
 Install Luahscript using haxelib:
 
 ```bash
+haxelib install luahscript
+```
+---
+
+If you need to experience new features, you can download lib in github:
+
+```bash
 haxelib git luahscript https://github.com/VapireMox/luahscript
 ```
 
@@ -61,7 +68,7 @@ class Main {
 
 ## Usage Examples
 
-For more usage examples, please refer to the [tests directory](./tests).
+For more usage examples, please refer to the [tests directory](./tests).(No completion!)
 
 ## Contributing
 
