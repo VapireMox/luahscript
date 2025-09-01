@@ -130,9 +130,10 @@ class LuaParser {
 				return unexpected(tk);
 			case TOp(op) if((!commaAnd || op != "=") && opPriority.get(op) > -1):
 				var e2 = if(!assignQuare && op == "=") {
+					final oaq = assignQuare;
 					assignQuare = true;
 					var e = parseExpr();
-					assignQuare = false;
+					assignQuare = oaq;
 					e;
 				} else {
 					parseExpr();
@@ -191,9 +192,10 @@ class LuaParser {
 			case TConst(c):
 				parseNextExpr(mk(EConst(c)), true);
 			case TPOpen:
+				final oca = commaAnd;
 				commaAnd = true;
 				var e = parseExpr();
-				commaAnd = false;
+				commaAnd = oca;
 				tk = token();
 				switch( tk ) {
 					case TPClose:
@@ -257,9 +259,10 @@ class LuaParser {
 		push(tk);
 		while( true ) {
 			// 本来我是想直接解析EAnd来获取arg的，不过想了想算了（
+			final oca = commaAnd;
 			commaAnd = true;
 			args.push(parseExpr());
-			commaAnd = false;
+			commaAnd = oca;
 			tk = token();
 			switch( tk ) {
 			case TComma:
@@ -391,6 +394,7 @@ class LuaParser {
 			case "for":
 				var v = getIdent();
 				if(maybe(TOp("="))) {
+					final oca = commaAnd;
 					commaAnd = true;
 					var start = parseExpr();
 					ensure(TComma);
@@ -399,7 +403,7 @@ class LuaParser {
 					if(maybe(TComma)) {
 						step = parseExpr();
 					}
-					commaAnd = false;
+					commaAnd = oca;
 					ensure(TId("do"));
 					var body = parseTd(false);
 					mk(EForNum(v, body, start, end, step));
@@ -419,9 +423,10 @@ class LuaParser {
 				}
 			case "repeat":
 				var body = parseTd(["until"], false, false);
+				final oca = commaAnd;
 				commaAnd = true;
 				var cond = parseExpr();
-				commaAnd = false;
+				commaAnd = oca;
 				mk(ERepeat(body, cond));
 			case "while":
 				var cond = parseExpr();
@@ -610,6 +615,7 @@ class LuaParser {
 				error(EUnterminatedString(c));
 				break;
 			}
+			if(c == 10) line++;
 			if(c == "]".code) {
 				var nd = readPos();
 				if(nd == "=".code && i > 0) {
