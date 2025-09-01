@@ -70,7 +70,3 @@ Contributions are welcome! Please follow these steps:
 3. Make your changes
 4. Add tests
 5. Submit a Pull Request
-
-## License
-
-Luahscript is released under the MIT License. See the LICENSE file for details.
