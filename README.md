@@ -1,6 +1,76 @@
 # Luahscript
-- Using hscript to parse lua script, Currently still under development.
 
-- Currently, already support compilation on cpp, neko, interp, js, and js platforms
-## Usage
-- <ins/>[(see tests)](./tests)<ins/> 
+Luahscript is a Haxe library that uses hscript to parse and execute Lua scripts. The project is still under development, but already supports compilation on multiple platforms.
+
+## Features
+
+- Uses hscript to parse Lua scripts
+- Supports compilation on multiple platforms: C++, Neko, Interp, JavaScript, and more
+- Provides complete Lua syntax support, including variables, control structures, functions, and tables
+- Supports metatables and metamethods
+- Offers error handling and debugging capabilities
+
+## Installation
+
+Install Luahscript using haxelib:
+
+```bash
+haxelib install luahscript
+```
+
+## Quick Start
+
+Here's a simple example showing how to parse and execute a Lua script:
+
+```haxe
+import luahscript.LuaParser;
+import luahscript.LuaInterp;
+import luahscript.exprs.LuaExpr;
+
+class Main {
+    public static function main() {
+        // Define a simple Lua script
+        var luaScript = '
+            local function greet(name)
+                return "Hello, " .. name .. "!"
+            end
+            
+            return greet("World")
+        ';
+        
+        // Parse the Lua script
+        var parser = new LuaParser();
+        var expr = parser.parseFromString(luaScript);
+        
+        // Create an interpreter and execute the script
+        var interp = new LuaInterp();
+        var result = interp.execute(expr);
+        
+        // Execute the returned function and trace the result
+        trace(result()); // Output: Hello, World!
+    }
+}
+```
+
+## Documentation
+
+- [Complete Documentation](./DOCUMENTATION.md)
+- [Tutorial](./TUTORIAL.md)
+
+## Usage Examples
+
+For more usage examples, please refer to the [tests directory](./tests).
+
+## Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork this repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a Pull Request
+
+## License
+
+Luahscript is released under the MIT License. See the LICENSE file for details.
