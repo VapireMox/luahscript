@@ -10,7 +10,7 @@ Before starting this tutorial, make sure you have:
 
 - Basic knowledge of Haxe programming
 - Haxe development environment set up
-- Luahscript library installed (`haxelib install luahscript`)
+- Luahscript library installed (`haxelib git luahscript https://github.com/VapireMox/luahscript`)
 
 ## Tutorial Contents
 
