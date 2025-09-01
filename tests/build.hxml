@@ -1,0 +1,22 @@
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
+./targets/js.hxml
+
+--next
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
+./targets/cpp.hxml
+
+--next
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
+./targets/neko.hxml
+
+--next
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
+./targets/interp.hxml

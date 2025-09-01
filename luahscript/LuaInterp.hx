@@ -180,7 +180,16 @@ class LuaInterp {
 				buf.add(Std.string(arg));
 				if(i < args.length - 1) buf.add("\t");
 			}
+			#if js
+			if (js.Syntax.typeof(untyped console) != "undefined" && (untyped console).log != null)
+				(untyped console).log(buf.toString());
+			#elseif lua
+			untyped __define_feature__("use._hx_print", _hx_print(buf.toString()));
+			#elseif sys
 			Sys.println(buf.toString());
+			#else
+		throw new haxe.exceptions.NotImplementedException()
+		#end
 		}));
 		globals.set("type", function(v:Dynamic):String {
 			return LuaCheckType.checkType(v);
@@ -196,9 +205,7 @@ class LuaInterp {
 			throw message;
 			return null;
 		});
-		globals.set("error", function(message:String, ?level:Int) {
-			throw message;
-		});
+		globals.set("error", lua_error);
 		globals.set("pcall", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
 			if(args.length > 0) {
 				var func:Dynamic = null;
@@ -374,7 +381,7 @@ class LuaInterp {
 						if(v.length != null) v.length else 0;
 					case "not":
 						if(isMetaTable(v) && v.metaTable.keyExists("__unm")) return cast(v, LuaTable<Dynamic>).__unm(v);
-						!luaBool(e);
+						!luaBool(v);
 					case _:
 						error(EInvalidOp(prefix));
 				}
@@ -561,7 +568,8 @@ class LuaInterp {
 				if(names.length > 0) {
 					final name = names[names.length - 1];
 					if(obj != null) {
-						obj.set(name, f);
+						if(isTable(obj)) cast(obj, LuaTable<Dynamic>).set(name, f);
+						else error(ECustom("not support loading functions in object forms other than tables"));
 					} else {
 						if(isLocal) {
 							declared.push({n: name, old: locals.get(name)});
@@ -888,6 +896,10 @@ class LuaInterp {
 			h2.set(k, h.get(k));
 		return h2;
 	}
+
+	function lua_error(message:String, ?l:Int) {
+			throw message;
+		}
 
 	inline function exists(id:String):Bool {
 		return locals.get(id) != null || globals.exists(id);

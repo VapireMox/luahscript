@@ -3,95 +3,103 @@ package luahscript;
 import luahscript.LuaInterp;
 
 /**
- * 由我们弱智且傻逼的Dickseek生成（但还是得改）
- * 我也不是不想整，主要不是懒，而是“确实懒”
+ * 希望各位以我为戒，不要过度使用傻逼dickseek
  */
 @:allow(luahscript.LuaTableIpairsIterator)
 @:allow(luahscript.LuaInterp)
 class LuaTable<V> {
 	public var length(get, never):Int;
 	inline function get_length():Int {
-		return array.length + mapLength;
+		return _keys.length;
 	}
 
 	public var metaTable:LuaTable<Dynamic>;
 
-	var map:Map<Dynamic, V>;
-	var array:Array<V>;
-
-	@:noCompletion private var nextIndex:Int;
-
-	private var mapLength:Int;
+	private var nextIndex:Int;
+	var _keys:Array<Dynamic>;
+	var _values:Array<V>;
 
 	public function new() {
-		map = new Map<Dynamic, V>();
-		array = [];
+		nextIndex = 1;
+		_keys = [];
+		_values = [];
 	}
 
 	/**
 	 * 设置值，可以是任意类型的键或数组索引
 	 */
 	public function set(key:Dynamic, value:V, toOverride:Bool = true):Void {
-		if (key is Int) {
-			var idx:Int = cast key;
-			if (idx > 0) {
-				removeMap(idx);
-				if(idx <= array.length + 1) {
-					if(toOverride || !(idx < array.length)) array[idx] = value;
-					return;
+		if(_keys.contains(key)) {
+			if(!toOverride) return;
+			final index = _keys.indexOf(key);
+			_values[index] = value;
+			return;
+		}
+		if(key == nextIndex) {
+			_keys.insert(nextIndex - 1, key);
+			_values.insert(nextIndex - 1, value);
+			nextIndex++;
+		} else {
+			_keys.push(key);
+			_values.push(value);
+		}
+
+		fixKey();
+	}
+
+	public function push(value:V):Int {
+		_keys.insert(nextIndex - 1, nextIndex);
+		_values.insert(nextIndex - 1, value);
+		final result = nextIndex++;
+		fixKey();
+		return result;
+	}
+
+	public function remove(key:Dynamic):Void {
+		if(_keys.contains(key)) {
+			final index = _keys.indexOf(key);
+			_keys.remove(key);
+			_values.remove(_values[index]);
+			if(LuaCheckType.isInteger(key)) {
+				var int:Int = cast key;
+				if(int < nextIndex) {
+					for(i in 0...nextIndex - int - 1) {
+						_keys[index + i] -= 1;
+					}
+					nextIndex--;
 				}
 			}
 		}
-		// 对于非正整数键并且未超过array的长度，使用Map存储
-		setMap(key, value);
 	}
 
-	inline function setMap(key:Dynamic, value:V):Void {
-		if(!map.exists(key)) mapLength++;
-		map.set(key, value);
-	}
-
-	inline function removeMap(key:Dynamic):Void {
-		if(map.exists(key)) {
-			mapLength--;
-			map.remove(key);
+	inline function fixKey() {
+		if(_keys.contains(nextIndex)) {
+			final index = _keys.indexOf(nextIndex);
+			final value = _values[index];
+			_keys.remove(nextIndex);
+			_values.remove(value);
+			_keys.insert(index - 1, nextIndex);
+			_values.insert(index - 1, value);
+			nextIndex++;
 		}
 	}
 
 	public inline function keyExists(key:Dynamic):Bool {
-		return map.exists(key);
+		return _keys.contains(key);
 	}
 
 	/**
 	 * 获取值
 	 */
 	public function get(key:Dynamic):Null<V> {
-		if (key is Int) {
-			var idx:Int = cast key;
-			if (idx > 0 && idx <= array.length) {
-				return array[idx];
-			}
-		}
-		return map.get(key);
+		return _values[_keys.indexOf(key)];
 	}
 
 	/**
 	 * 迭代所有键
 	 */
 	public function keys():Iterator<Dynamic> {
-		var keysList:Array<Dynamic> = [];
-
-		// 添加数组索引作为键
-		for (i in 1...array.length) {
-			keysList.push(i);
-		}
-
-		// 添加map中的键
-		for (key in map.keys()) {
-			keysList.push(key);
-		}
-
-		return keysList.iterator();
+		return _keys.iterator();
 	}
 	
 	/**
@@ -281,19 +289,21 @@ class LuaTable<V> {
 }
 
 class LuaTableIpairsIterator<T> {
-	var array:Array<T>;
+	var table:LuaTable<T>;
+	var length:Int;
 	var current:Int = 1;
 
 	public inline function new(table:LuaTable<T>) {
-		this.array = table.array;
+		this.length = table.nextIndex;
+		this.table = table;
 	}
 
 	public inline function hasNext() {
-		return current < array.length;
+		return current < length;
 	}
 
 	public inline function next() {
-		return {value: array[current], key: current++};
+		return {value: table.get(current), key: current++};
 	}
 }
 

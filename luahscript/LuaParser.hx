@@ -15,7 +15,7 @@ class LuaParser {
 
 	var pos:Int;
 	var line:Int = 1;
-	var _tokens:Array<LuaToken>;
+	var _tokens:haxe.ds.GenericStack<LuaToken>;
 	var _token:LuaToken;
 
 	var commaAnd:Bool = false;
@@ -56,7 +56,7 @@ class LuaParser {
 		assignQuare = false;
 
 		saveVariables = [];
-		_tokens = [];
+		_tokens = new haxe.ds.GenericStack<LuaToken>();
 		pos = 0;
 		line = 1;
 	}
@@ -189,7 +189,7 @@ class LuaParser {
 				if(logicOperators.contains(id) || keywords.contains(id)) parseIdent(id);
 				else parseNextExpr(parseIdent(id));
 			case TConst(c):
-				parseNextExpr(mk(EConst(c)));
+				parseNextExpr(mk(EConst(c)), true);
 			case TPOpen:
 				commaAnd = true;
 				var e = parseExpr();
@@ -635,11 +635,11 @@ class LuaParser {
 	}
 
 	inline function readPos():Int {
-		return StringTools.unsafeCodeAt(content, pos++);
+		return StringTools.fastCodeAt(content, pos++);
 	}
 
-	inline function push(t:LuaToken):Int {
-		return _tokens.push(t);
+	inline function push(t:LuaToken):Void {
+		_tokens.add(t);
 	}
 
 	inline function ensure(tk) {
@@ -656,9 +656,8 @@ class LuaParser {
 	}
 
 	function token():LuaToken {
-		if(_tokens.length > 0) {
+		if(!_tokens.isEmpty())
 			return _tokens.pop();
-		}
 
 		var char = readPos();
 		_token = switch(char) {

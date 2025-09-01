@@ -47,7 +47,7 @@ print()
 print("3. 控制结构")
 
 -- if 语句
-local x = 10
+local x = 5
 if x > 5 then
     print("x 大于 5")
 elseif x == 5 then
@@ -156,7 +156,6 @@ print("7. 错误处理")
 local success, result = pcall(function()
     error("这是一个测试错误!")
 end)
-
 if not success then
     print("捕获到错误:", result)
 end

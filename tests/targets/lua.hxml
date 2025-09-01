@@ -1,0 +1,2 @@
+-lua export/Main.lua
+-cmd lua export/Main.lua

@@ -1,6 +1,6 @@
 # Luahscript
 - Using hscript to parse lua script, Currently still under development.
 
-- Currently, I have only tested the cpp compilation target without any issues
+- Currently, already support compilation on cpp, neko, interp, js, and js platforms
 ## Usage
 - <ins/>[(see tests)](./tests)<ins/> 

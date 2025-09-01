@@ -1,0 +1,2 @@
+-cs export/cs/
+--cmd mono ./export/cs/bin/Main.exe
