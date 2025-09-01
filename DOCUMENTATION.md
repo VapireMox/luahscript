@@ -383,7 +383,3 @@ If you'd like to contribute to the Luahscript project, please follow these guide
 3. Make your changes
 4. Add tests for new functionality
 5. Submit a pull request
-
-## License
-
-Luahscript is released under the MIT License. See the LICENSE file for more details.
