@@ -64,7 +64,6 @@ class Main {
 ## Documentation
 
 - [Complete Documentation](./DOCUMENTATION.md)
-- [Tutorial](./TUTORIAL.md)
 
 ## Usage Examples
 
