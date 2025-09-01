@@ -44,9 +44,11 @@ class Main {
         
         // Create an interpreter and execute the script
         var interp = new LuaInterp();
-        var result = interp.execute(expr);
+        
+        var result = interp.execute(expr, ["haxe is 'Great'!", 1314,]); // Input parameters for Lua in the form of an array
         
         // Execute the returned function and trace the result
+        // NOTE: The function from Lua are usually 'luahscript.LuaAndParams'. if want to obtain its value, call the "values" field, pls.
         trace(result()); // Output: Hello, World!
     }
 }
@@ -70,7 +72,7 @@ Contributions are welcome! Please follow these steps:
 3. Make your changes
 4. Add tests
 5. Submit a Pull Request
-6. 
+
 ## License
 
 Luahscript is released under the Apache 2.0 License. See the LICENSE file for details.

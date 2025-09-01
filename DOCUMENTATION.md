@@ -92,7 +92,7 @@ class BasicExample {
             end
             
             -- Table
-            local person = {
+            person = {
                 name = "John",
                 age = 30,
                 greet = function(self)
@@ -100,17 +100,17 @@ class BasicExample {
                 end
             }
         ';
-        
+
         // Parse and execute the script
         var parser = new LuaParser();
         var expr = parser.parseFromString(luaScript);
         var interp = new LuaInterp();
         interp.execute(expr);
-        
-        // Access Lua variables and functions from Haxe
-        var addFunc = interp.resolve("add");
-        var person = interp.resolve("person");
-        
+
+        // Access Lua variables and functions from Haxe, but they need save in "globals"
+        var addFunc = interp.globals.get("add");
+        var person = interp.globals.get("person");
+
         // Call Lua functions
         trace(addFunc(5, 3)); // Output: 8
         trace(person.greet(person)); // Output: Hi, I'm John
@@ -163,19 +163,19 @@ class DataExchangeExample {
         interp.execute(expr);
         
         // Get the Lua functions
-        var processArray = interp.resolve("processArray");
-        var createTable = interp.resolve("createTable");
+        var processArray = interp.globals.get("processArray");
+        var createTable = interp.globals.get("createTable");
         
-        // Pass Haxe array to Lua
-        var haxeArray = [1, 2, 3, 4, 5];
+        // on haxe, array need to convert luahscript.LuaTable
+        var convert = luahscript.LuaTable.fromArray([1, 2, 3, 4, 5]);
         var sum = processArray(haxeArray);
         trace("Sum of array: " + sum); // Output: Sum of array: 15
-        
-        // Get a table from Lua
-        var table = createTable("Numbers", haxeArray);
-        trace("Table name: " + table.name); // Output: Table name: Numbers
-        trace("Table count: " + table.count); // Output: Table count: 5
-        trace("Table sum: " + table.sum); // Output: Table sum: 15
+
+        var table = createTable("Numbers", haxeArray).values[0];
+        // on haxe, you can use "LuaTable.get & LuaTable.set" to "get & set" for lua
+        trace("Table name: " + table.get("name")); // Output: Table name: Numbers
+        trace("Table count: " + table.get("count")); // Output: Table count: 5
+        trace("Table sum: " + table.get("sum")); // Output: Table sum: 15
     }
 }
 ```
@@ -220,8 +220,8 @@ class ErrorHandlingExample {
         interp.execute(expr);
         
         // Get the Lua functions
-        var divide = interp.resolve("divide");
-        var safeDivide = interp.resolve("safeDivide");
+        var divide = interp.globals.get("divide");
+        var safeDivide = interp.globals.get("safeDivide");
         
         try {
             // This will throw an error
@@ -299,15 +299,15 @@ class MetatableExample {
         interp.execute(expr);
         
         // Get the Lua function
-        var vectorDemo = interp.resolve("vectorDemo");
+        var vectorDemo = interp.locals.get("vectorDemo");
         
         // Call the function and display the results
         var results = vectorDemo();
-        trace("v1: " + results.v1); // Output: v1: (1, 2)
-        trace("v2: " + results.v2); // Output: v2: (3, 4)
-        trace("v1 + v2: " + results.v3); // Output: v1 + v2: (4, 6)
-        trace("v1 - v2: " + results.v4); // Output: v1 - v2: (-2, -2)
-        trace("v1 * 3: " + results.v5); // Output: v1 * 3: (3, 6)
+        trace("v1: " + results.values[0].get("v1")); // Output: v1: (1, 2)
+        trace("v2: " + results.values[0].get("v2")); // Output: v2: (3, 4)
+        trace("v1 + v2: " + results.values[0].get("v3")); // Output: v1 + v2: (4, 6)
+        trace("v1 - v2: " + results.values[0].get("v4")); // Output: v1 - v2: (-2, -2)
+        trace("v1 * 3: " + results.values[0].get("v5")); // Output: v1 * 3: (3, 6)
     }
 }
 ```
@@ -346,7 +346,7 @@ Represents a parsed Lua expression. This is typically created by the LuaParser a
 Luahscript supports a subset of Lua features, including:
 
 - Variables and data types (nil, boolean, number, string, function, table)
-- Arithmetic operators (+, -, *, /, //, %, ^)
+- Arithmetic operators (+, -, *, /, //, %, ^, #)
 - Comparison operators (==, ~=, <, >, <=, >=)
 - Logical operators (and, or, not)
 - Control structures (if, while, repeat, for)
@@ -383,3 +383,7 @@ If you'd like to contribute to the Luahscript project, please follow these guide
 3. Make your changes
 4. Add tests for new functionality
 5. Submit a pull request
+
+## Credits
+
+如下👎

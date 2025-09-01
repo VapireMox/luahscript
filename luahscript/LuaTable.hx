@@ -8,6 +8,15 @@ import luahscript.LuaInterp;
 @:allow(luahscript.LuaTableIpairsIterator)
 @:allow(luahscript.LuaInterp)
 class LuaTable<V> {
+	public static function fromArray<T>(arr:Array<T>):LuaTable<T> {
+		var lt = new LuaTable<T>();
+		var i:Int = -1;
+		while(i++ < arr.length - 1) {
+			lt.push(arr[i]);
+		}
+		return lt;
+	}
+
 	public var length(get, never):Int;
 	inline function get_length():Int {
 		return _keys.length;

@@ -284,7 +284,8 @@ class LuaInterp {
 		});
 	}
 
-	public function execute(expr:LuaExpr):Dynamic {
+	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
+		triple_value = LuaAndParams.fromArray(args ?? []);
 		isLocal = false;
 		locals = new Map();
 		declared = new Array();
@@ -308,7 +309,7 @@ class LuaInterp {
 	}
 
 	var isLocal:Bool;
-	function expr(e:LuaExpr, sb:Bool = false):Dynamic {
+	function expr(e:LuaExpr):Dynamic {
 		this.curExpr = e;
 		switch(e.expr) {
 			case EConst(c):
@@ -323,15 +324,10 @@ class LuaInterp {
 					case "true": true;
 					case "false": false;
 					case "nil": null;
-					case _:
-						var v:Dynamic = resolve(id);
-						if(sb && isAndParams(v)) {
-							return v.values[0];
-						}
-						v;
+					case _: resolve(id);
 				}
 			case EParent(e):
-				return expr(e, sb);
+				return expr(e);
 			case EField(e, f, isDouble):
 				var obj:Dynamic = expr(e);
 				if(e == null) {
@@ -355,11 +351,7 @@ class LuaInterp {
 					error(EInvalidAccess(sb, type));
 				}
 
-				var v:Dynamic = get(obj, f);
-				if(sb && isAndParams(v)) {
-					return v.values[0];
-				}
-				return v;
+				return get(obj, f);
 			case ELocal(e):
 				isLocal = true;
 				return expr(e);
@@ -368,8 +360,8 @@ class LuaInterp {
 					evalAssignOp(e1, e2);
 					return null;
 				}
-				final left:Dynamic = expr(e1, sb);
-				final right:Dynamic = expr(e2, sb);
+				final left:Dynamic = expr(e1);
+				final right:Dynamic = expr(e2);
 				var fop = binops.get(op);
 				if(fop != null) return fop(left, right);
 				return error(EInvalidOp(op));
@@ -386,7 +378,20 @@ class LuaInterp {
 						error(EInvalidOp(prefix));
 				}
 			case ECall(e, params):
-				final args:Array<Dynamic> = [for(p in params) expr(p, true)];
+				final args:Array<Dynamic> = [];
+				for(i=>p in params) {
+					var v:Dynamic = expr(p);
+					if(isAndParams(v)) {
+						final lap:LuaAndParams = cast v;
+						if(lap.values.length > 0) {
+							for(value in lap.values) {
+								args.push(value);
+							}
+						} else args.push(null);
+						continue;
+					}
+					args.push(v);
+				}
 				switch(e.expr) {
 					case EField(ef, f, double):
 						var obj:Dynamic = expr(ef);
@@ -433,11 +438,7 @@ class LuaInterp {
 							error(ECallNilValue(sb, type));
 						}
 						if(double == true) args.insert(0, obj);
-						var v:Dynamic = try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
-						if(sb && isAndParams(v)) {
-							return v.values[0];
-						}
-						return v;
+						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
 					case _:
 						var func:Dynamic = expr(e);
 						if(func == null) {
@@ -460,11 +461,7 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						var v:Dynamic = try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
-						if(sb && isAndParams(v)) {
-							return v.values[0];
-						}
-						return v;
+						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
 				}
 			case ETd(ae):
 				var old = declared.length;
@@ -528,11 +525,10 @@ class LuaInterp {
 				throw LuaStop.SContinue;
 			case EFunction(args, e, info):
 				var index = args.indexOf("...");
-				if(index > -1 && index < args.length - 1) error(ECustom("param '...' only used in last element"));
+				final names = (info != null ? info.names : []);
 				var me = this;
 				var isDouble = false;
 				var obj:Dynamic = null;
-				final names = (info != null ? info.names : []);
 				if(info != null) {
 					isDouble = info.isDouble;
 					var preName:Null<String> = null;

@@ -234,14 +234,17 @@ class LuaParser {
 			return args;
 		push(tk);
 		while( true ) {
+			var tb = false;
 			args.push(switch(tk = token()) {
 				case TId(id): id;
-				case TOp("..."): "...";
+				case TOp("..."):
+					tb = true;
+					"...";
 				case _: unexpected(tk);
 			});
 			tk = token();
 			switch( tk ) {
-			case TComma:
+			case TComma if(!tb):
 			default:
 				if( tk == TPClose) break;
 				unexpected(tk);
