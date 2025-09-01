@@ -70,3 +70,7 @@ Contributions are welcome! Please follow these steps:
 3. Make your changes
 4. Add tests
 5. Submit a Pull Request
+6. 
+## License
+
+Luahscript is released under the Apache 2.0 License. See the LICENSE file for details.
