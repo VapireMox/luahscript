@@ -97,4 +97,8 @@ class LuaTools {
 			}
 		};
 	}
+
+	public inline static function luaBool(q:Dynamic):Bool {
+		return q != false && q != null;
+	}
 }

@@ -17,6 +17,16 @@ class LuaTable<V> {
 		return lt;
 	}
 
+	public static function fromObject(obj:Dynamic):LuaTable<Dynamic> {
+		var lt = new LuaTable<Dynamic>();
+		if(Reflect.isObject(obj)) {
+			for(f in Reflect.fields(obj)) {
+				lt.set(f, Reflect.field(obj, f), false);
+			}
+		}
+		return lt;
+	}
+
 	public var length(get, never):Int;
 	inline function get_length():Int {
 		return _keys.length;

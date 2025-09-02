@@ -165,11 +165,11 @@ class LuaInterp {
 			return a == b;
 		});
 		binops.set("and", function(a:Dynamic, b:Dynamic) {
-			if(!luaBool(a)) return a;
+			if(!LuaTools.luaBool(a)) return a;
 			return b;
 		});
 		binops.set("or", function(a:Dynamic, b:Dynamic) {
-			if(luaBool(a)) return a;
+			if(LuaTools.luaBool(a)) return a;
 			return b;
 		});
 
@@ -201,7 +201,7 @@ class LuaInterp {
 			return Lua_tonumber.tonumber(v, base);
 		});
 		globals.set("assert", function(v:Dynamic, ?message:String) {
-			if(luaBool(v)) return v;
+			if(LuaTools.luaBool(v)) return v;
 			throw message;
 			return null;
 		});
@@ -282,6 +282,9 @@ class LuaInterp {
 		globals.set("getmetatable", function(o:LuaTable<Dynamic>):LuaTable<Dynamic> {
 			return o.metaTable;
 		});
+
+		//math
+		globals.set("math", luahscript.lualibs.LuaMathLib.implement());
 	}
 
 	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
@@ -373,7 +376,7 @@ class LuaInterp {
 						if(v.length != null) v.length else 0;
 					case "not":
 						if(isMetaTable(v) && v.metaTable.keyExists("__unm")) return cast(v, LuaTable<Dynamic>).__unm(v);
-						!luaBool(v);
+						!LuaTools.luaBool(v);
 					case _:
 						error(EInvalidOp(prefix));
 				}
@@ -477,13 +480,13 @@ class LuaInterp {
 				return ae;
 			case EIf(cond, body, eis, eel):
 				final newCond = expr(cond);
-				if(luaBool(newCond)) {
+				if(LuaTools.luaBool(newCond)) {
 					expr(body);
 				} else {
 					var crosseis = false;
 					if(eis != null) for(e in eis) {
 						final newCond = expr(e.cond);
-						if(luaBool(newCond)) {
+						if(LuaTools.luaBool(newCond)) {
 							crosseis = true;
 							expr(e.body);
 							break;
@@ -500,7 +503,7 @@ class LuaInterp {
 						break;
 				} while((newCond = expr(cond)) == false || newCond == null);
 			case EWhile(cond, e):
-				while(luaBool(expr(cond))) {
+				while(LuaTools.luaBool(expr(cond))) {
 					if(!loopRun(() -> expr(e)))
 						break;
 				}
@@ -921,10 +924,6 @@ class LuaInterp {
 	inline static function isMetaTable(o: Dynamic): Bool {
 		return (o is LuaTable) && cast(o, LuaTable<Dynamic>).metaTable != null;
 	}
-
-	inline static function luaBool(q:Dynamic):Bool {
-		return q != false && q != null;
-	}
 }
 
 enum abstract LuaTyper(Int) from Int to Int {
@@ -975,6 +974,18 @@ class LuaCheckType {
 	public inline static function isInteger(v:Dynamic):Bool {
 		if(checkType(v) == TNUMBER) return Std.int(v) == v;
 		return false;
+	}
+
+	public static function checkInteger(v:Dynamic):Null<Int> {
+		if(isInteger(v)) return Std.int(v);
+		throw "expected int, got " + checkType(v);
+		return null;
+	}
+
+	public static function checkNumber(v:Dynamic):Null<Float> {
+		if(checkType(v) == TNUMBER) return v;
+		throw "expected int, got " + checkType(v);
+		return null;
 	}
 }
 

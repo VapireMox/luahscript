@@ -202,14 +202,13 @@ print()
 ]]
 
 -- 11. 数学运算
-print("11. 数学运算（未完成）")
---[[
+print("11. 数学运算")
 print("绝对值:", math.abs(-10))
 print("平方根:", math.sqrt(16))
 print("随机数:", math.random())
 print("π的值:", math.pi)
 print()
-]]
+
 
 -- 12. 表操作
 print("12. 表操作（未完成）")
