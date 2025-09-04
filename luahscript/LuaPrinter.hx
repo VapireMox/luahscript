@@ -5,7 +5,7 @@ import luahscript.exprs.LuaError;
 class LuaPrinter {
 	public static function errorToString(e: LuaError, showPos: Bool = true) {
 		var message = switch (e.err) {
-			case EInvalidChar(c): "expected char near '<" + (StringTools.isEof(c) ? "eof" : Std.string(c)) + ">";
+			case EInvalidChar(c): "expected char near " + (StringTools.isEof(c) ? "'<\\eof>'" : Std.string(luahscript.LuaParser.inLu(c) ? String.fromCharCode(c) : "'<\\" + Std.string(c) + ">'"));
 			case EUnexpected(s): "expected symbol near '" + s + "'";
 			case EUnterminatedString(c): "unfinished string near '<\\" + (StringTools.isEof(c) ? "eof" : Std.string(c)) + ">'";
 			case EUnterminatedComment: "unfinished long comment near <eof>";

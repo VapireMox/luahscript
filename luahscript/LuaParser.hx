@@ -740,18 +740,44 @@ class LuaParser {
 			case ".".code:
 				char = readPos();
 				if(inNumber(char)) {
-					var n = "." + String.fromCharCode(char);
+					var buf = new StringBuf();
+					var exp = false;
+					buf.add(".");
+					buf.addChar(char);
 					while(true) {
 						if(!inNumber(char = readPos())) {
+							if(!exp && (char == "e".code || char == "E".code)) {
+								exp = true;
+								var prefix = false;
+								var number = false;
+								buf.addChar(char);
+								while(true) {
+									switch(char = readPos()) {
+										case "+".code, "-".code if(!prefix):
+											prefix = true;
+											buf.addChar(char);
+										case _ if(inNumber(char)):
+											number = true;
+											buf.addChar(char);
+										case _:
+											if(!number || inLetter(char) || char == ".".code) {
+												error(EInvalidChar(char));
+											}
+											pos--;
+											break;
+									}
+								}
+								continue;
+							}
 							if(inLetter(char) || inDownLine(char) || char == ".".code) {
 								error(EUnexpected(String.fromCharCode(char)));
 							}
 							pos--;
 							break;
 						}
-						n += String.fromCharCode(char);
+						buf.addChar(char);
 					}
-					TConst(CFloat(Std.parseFloat(n)));
+					TConst(CFloat(Std.parseFloat(buf.toString())));
 				} else if(char == ".".code) {
 					if((char = readPos()) == ".".code) {
 						TOp("...");
@@ -813,20 +839,45 @@ class LuaParser {
 				if(logicOperators.contains(id)) TOp(id);
 				else TId(id);
 			case _ if(inNumber(char)):
-				var n = String.fromCharCode(char);
+				var buf = new StringBuf();
+				buf.addChar(char);
 				var isFloat = false;
+				var exp = false;
 				while(true) {
 					if(!inNumber(char = readPos()) && (isFloat || char != ".".code)) {
-						if(inLetter(char) || inDownLine(char) || char == ".".code) {
+						if(!exp && (char == "e".code || char == "E".code)) {
+							exp = true;
+							var prefix = false;
+							var number = false;
+							buf.addChar(char);
+							while(true) {
+								switch(char = readPos()) {
+									case "+".code, "-".code if(!prefix):
+										prefix = true;
+										buf.addChar(char);
+									case _ if(inNumber(char)):
+										number = true;
+										buf.addChar(char);
+									case _:
+										if(!number || inLetter(char) || char == ".".code) {
+											error(EInvalidChar(char));
+										}
+										pos--;
+										break;
+								}
+							}
+							continue;
+						}
+						if(inLetter(char) || char == ".".code) {
 							error(EUnexpected(String.fromCharCode(char)));
 						}
 						pos--;
 						break;
 					}
 					if(!isFloat && char == ".".code) isFloat = true;
-					n += String.fromCharCode(char);
+					buf.addChar(char);
 				}
-				TConst(if(isFloat) CFloat(Std.parseFloat(n)) else CInt(Std.parseInt(n)));
+				TConst(if(isFloat || exp) CFloat(Std.parseFloat(buf.toString())) else CInt(Std.parseInt(buf.toString())));
 			default:
 				error(EInvalidChar(char));
 		}
@@ -890,7 +941,7 @@ class LuaParser {
 		return char == 95;
 	}
 
-	inline static function inLu(char:Int):Bool {
+	public inline static function inLu(char:Int):Bool {
 		return inNumber(char) || inLetter(char);
 	}
 
