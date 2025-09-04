@@ -283,8 +283,9 @@ class LuaInterp {
 			return o.metaTable;
 		});
 
-		//math
+		//lua lib
 		globals.set("math", luahscript.lualibs.LuaMathLib.implement());
+        globals.set("string", luahscript.lualibs.LuaStringLib.implement());
 	}
 
 	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
