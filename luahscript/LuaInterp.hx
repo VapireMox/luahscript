@@ -988,6 +988,12 @@ class LuaCheckType {
 		throw "expected int, got " + checkType(v);
 		return null;
 	}
+
+	public static function checkString(v:Dynamic):Null<String> {
+		if(checkType(v) == TSTRING) return v;
+		throw "expected int, got " + checkType(v);
+		return null;
+	}
 }
 
 class Lua_tonumber {

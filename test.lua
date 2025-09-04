@@ -190,8 +190,7 @@ print("计数器:", counter())
 print()
 
 -- 10. 字符串操作
-print("10. 字符串操作（未完成）")
---[[
+print("10. 字符串操作")
 local s = "Lua Programming"
 print("字符串长度:", #s)
 print("大写:", string.upper(s))
@@ -199,7 +198,6 @@ print("小写:", string.lower(s))
 print("子字符串:", string.sub(s, 5, 7))
 print("查找 'Pro':", string.find(s, "Pro"))
 print()
-]]
 
 -- 11. 数学运算
 print("11. 数学运算")
