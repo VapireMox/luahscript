@@ -797,7 +797,7 @@ class LuaParser {
 			case 10:
 				line++;
 				token();
-			case 9, 32:
+			case 9, 32, 13:
 				token();
 			case _ if(StringTools.isEof(char)):
 				TEof;
