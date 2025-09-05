@@ -283,9 +283,25 @@ class LuaInterp {
 			return o.metaTable;
 		});
 
-		//lua lib
-		globals.set("math", luahscript.lualibs.LuaMathLib.implement());
-        globals.set("string", luahscript.lualibs.LuaStringLib.implement());
+		initLuaLibs(globals);
+	}
+
+	private static var lualibs = new Map<String, LuaTable<Dynamic>>();
+	public static function initLuaLibs(map:Map<String, Dynamic>) {
+		// fw lua lib
+		setLibs(map, "math", luahscript.lualibs.LuaMathLib);
+		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
+	}
+
+	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
+		value = if(lualibs.exists(name)) {
+			lualibs.get(name);
+		} else {
+			final v:Dynamic = value.implement();
+			lualibs.set(name, v);
+			v;
+		}
+		map.set(name, value);
 	}
 
 	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
@@ -355,7 +371,7 @@ class LuaInterp {
 					error(EInvalidAccess(sb, type));
 				}
 
-				return get(obj, f);
+				return get(obj, f, isDouble);
 			case ELocal(e):
 				isLocal = true;
 				return expr(e);
@@ -420,7 +436,7 @@ class LuaInterp {
 							error(EInvalidAccess(sb, type));
 						}
 
-						final func:Dynamic = get(obj, f);
+						final func:Dynamic = get(obj, f, double);
 						if(func == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
@@ -541,7 +557,7 @@ class LuaInterp {
 							obj = resolve(name);
 						} else {
 							if(obj == null) error(EInvalidAccess(preName, (preName == null ? UNKNOWN : (i > 1 ? FIELD : (locals.get(preName) != null ? LOCAL : GLOBAL)))));
-							if(i < names.length - 1) obj = get(obj, name);
+							if(i < names.length - 1) obj = get(obj, name, isDouble);
 						}
 						preName = name;
 					}
@@ -657,7 +673,13 @@ class LuaInterp {
 		return null;
 	}
 
-	function get(obj:Dynamic, f:String):Dynamic {
+	function get(obj:Dynamic, f:String, isDouble:Bool = false):Dynamic {
+		if(obj is String) {
+			if(isDouble && lualibs.exists("string")) {
+				return lualibs.get("string").get(f);
+			}
+			return null;
+		}
 		if(isTable(obj)) {
 			final result = cast(obj, LuaTable<Dynamic>).__read(obj, f);
 			return result;
@@ -665,7 +687,7 @@ class LuaInterp {
 		return Reflect.getProperty(obj, f);
 	}
 
-	function set(obj:Dynamic, f:String, value:Dynamic) {
+	function set(obj:Dynamic, f:String, value:Dynamic, isDouble:Bool = false) {
 		if(isTable(obj)) return cast(obj, LuaTable<Dynamic>).__write(obj, f, value);
 		Reflect.setProperty(obj, f, value);
 	}
@@ -707,7 +729,7 @@ class LuaInterp {
 					});
 					error(EInvalidAccess(sb, type));
 				};
-				set(o, f, ex[0]);
+				set(o, f, ex[0], isDouble);
 			case EArray(arr, index):
 				var ex:Array<Dynamic> = if(isAndParams(e2)) cast(e2, LuaAndParams).values; else [e2];
 				var array:Dynamic = expr(arr);
@@ -785,7 +807,7 @@ class LuaInterp {
 					});
 					error(EInvalidAccess(sb, type));
 				};
-				set(o, f, ex[0]);
+				set(o, f, ex[0], isDouble);
 			case EArray(arr, index):
 				var ex:Dynamic = expr(e2);
 				var ex:Array<Dynamic> = if(isAndParams(ex)) cast(ex, LuaAndParams).values; else [ex];
@@ -992,6 +1014,12 @@ class LuaCheckType {
 	public static function checkString(v:Dynamic):Null<String> {
 		if(checkType(v) == TSTRING) return v;
 		throw "expected int, got " + checkType(v);
+		return null;
+	}
+
+	public static function checkTable(v:Dynamic):Null<LuaTable<Dynamic>> {
+		if(checkType(v) == TTABLE) return v;
+		throw "expected table, got " + checkType(v);
 		return null;
 	}
 }
