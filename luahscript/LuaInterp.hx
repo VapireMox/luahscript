@@ -306,7 +306,6 @@ class LuaInterp {
 
 	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
 		triple_value = LuaAndParams.fromArray(args ?? []);
-		isLocal = false;
 		locals = new Map();
 		declared = new Array();
 		return this.expr(expr);
@@ -328,8 +327,7 @@ class LuaInterp {
 		return new LuaAndParams();
 	}
 
-	var isLocal:Bool;
-	function expr(e:LuaExpr):Dynamic {
+	function expr(e:LuaExpr, isLocal:Bool = false):Dynamic {
 		this.curExpr = e;
 		switch(e.expr) {
 			case EConst(c):
@@ -373,11 +371,10 @@ class LuaInterp {
 
 				return get(obj, f, isDouble);
 			case ELocal(e):
-				isLocal = true;
-				return expr(e);
+				return expr(e, true);
 			case EBinop(op, e1, e2):
 				if(op == "=") {
-					evalAssignOp(e1, e2);
+					evalAssignOp(e1, e2, isLocal);
 					return null;
 				}
 				final left:Dynamic = expr(e1);
@@ -392,8 +389,10 @@ class LuaInterp {
 						if(isMetaTable(v) && v.metaTable.keyExists("__len")) return cast(v, LuaTable<Dynamic>).__len(v);
 						if(v.length != null) v.length else 0;
 					case "not":
-						if(isMetaTable(v) && v.metaTable.keyExists("__unm")) return cast(v, LuaTable<Dynamic>).__unm(v);
 						!LuaTools.luaBool(v);
+					case "-":
+						if(isMetaTable(v) && v.metaTable.keyExists("__unm")) return cast(v, LuaTable<Dynamic>).__unm(v);
+						-LuaCheckType.checkNumber(v);
 					case _:
 						error(EInvalidOp(prefix));
 				}
@@ -564,8 +563,11 @@ class LuaInterp {
 					if(isDouble && isLocal) error(ECustom("Cannot define the field of a global variable as local"));
 				}
 				if(isDouble) args.insert(0, "self");
+				var capturedLocals = duplicate(locals);
 				var f = Reflect.makeVarArgs(function(params:Array<Dynamic>) {
-					var old = me.declared.length;
+					var old = me.locals;
+					var oldDecl = me.declared.length;
+					me.locals = me.duplicate(capturedLocals);
 					final tv = me.triple_value;
 					for(i=>arg in args) {
 						if(arg == "...") {
@@ -576,8 +578,10 @@ class LuaInterp {
 							me.locals.set(arg, {r: params.shift()});
 						}
 					}
+					var oldDecl = declared.length;
 					var r = me.exprReturn(e);
-					me.restore(old);
+					restore(oldDecl);
+					me.locals = old;
 					me.triple_value = tv;
 					return r;
 				});
@@ -590,7 +594,6 @@ class LuaInterp {
 						if(isLocal) {
 							declared.push({n: name, old: locals.get(name)});
 							locals.set(name, {r: f});
-							isLocal = false;
 						} else {
 							globals.set(name, f);
 						}
@@ -692,7 +695,7 @@ class LuaInterp {
 		Reflect.setProperty(obj, f, value);
 	}
 
-	function evalAssignOpExpr(e1:LuaExpr, e2:Dynamic) {
+	function evalAssignOpExpr(e1:LuaExpr, e2:Dynamic, isLocal:Bool = false) {
 		switch(e1.expr) {
 			case EIdent(id):
 				var ex:Array<Dynamic> = if(isAndParams(e2)) cast(e2, LuaAndParams).values; else [e2];
@@ -761,13 +764,13 @@ class LuaInterp {
 		}
 	}
 
-	function evalAssignOp(e1:LuaExpr, e2:LuaExpr) {
+	function evalAssignOp(e1:LuaExpr, e2:LuaExpr, isLocal:Bool = false) {
 		switch(e1.expr) {
 			case EAnd(arr):
 				for(i=>eval in arr) {
 					var e2:Dynamic = expr(e2);
 					var ex:Array<Dynamic> = if(isAndParams(e2)) cast(e2, LuaAndParams).values; else [e2];
-					evalAssignOpExpr(eval, ex[i]);
+					evalAssignOpExpr(eval, ex[i], isLocal);
 				}
 				if(isLocal) isLocal = false;
 			case EIdent(id):
@@ -776,6 +779,7 @@ class LuaInterp {
 				if(isLocal) {
 					declared.push({n: id, old: locals.get(id)});
 					locals.set(id, {r: ex[0]});
+					isLocal = false;
 				} else {
 					if(locals.get(id) == null) {
 						globals.set(id, ex[0]);

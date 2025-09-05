@@ -356,8 +356,8 @@ class LuaParser {
 									break;
 							}
 						}
-						if(idents.length > 1) parseNextExpr(mk(EAnd([for(id in idents) mk(EIdent(id))])));
-						else parseNextExpr(mk(EIdent(idents[0])));
+						if(idents.length > 1) mk(ELocal(parseNextExpr(mk(EAnd([for(id in idents) mk(EIdent(id))])))));
+						else mk(ELocal(parseNextExpr(mk(EIdent(idents[0])))));
 					case TId("function"):
 						push(t);
 						mk(ELocal(parseExpr()));
