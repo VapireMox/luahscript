@@ -12,24 +12,51 @@ class LuaTableLib {
     }
 
     // table.concat(list, sep?, i?, j?)
-    public static function lualib_concat(list:Array<Dynamic>, ?sep:String = "", ?i:Int = 1, ?j:Int):String {
-        if (list == null) return "";
+    @:multiArgs
+    public static function lualib_concat(args:Array<Dynamic>):String {
+        if (args.length < 1) throw "concat requires at least 1 argument";
         
-        var len = list.length;
-        i = realPos(LuaCheckType.checkInteger(i), len);
-        j = (j == null) ? len - 1 : realPos(LuaCheckType.checkInteger(j), len);
+        var list = args[0];
+        var sep:String = (args.length > 1) ? Std.string(args[1]) : "";
+        var i:Int = (args.length > 2) ? LuaCheckType.checkInteger(args[2]) : 1;
+        var j:Int = (args.length > 3) ? LuaCheckType.checkInteger(args[3]) : null;
         
-        i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
-        j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
-        
-        if (i > j) return "";
-        
-        var buf = new StringBuf();
-        for (idx in i...j + 1) {
-            if (idx > i) buf.add(sep);
-            buf.add(Std.string(list[idx]));
+        if (Std.isOfType(list, LuaTable)) {
+            var table = cast(list, LuaTable<Dynamic>);
+            var len = table.length;
+            i = realPos(i, len);
+            j = (j == null) ? len : realPos(j, len);
+            
+            i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
+            j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
+            
+            if (i > j) return "";
+            
+            var buf = new StringBuf();
+            for (idx in i...j + 1) {
+                if (idx > i) buf.add(sep);
+                buf.add(Std.string(table.get(idx + 1)));
+            }
+            return buf.toString();
+        } else if (Std.isOfType(list, Array)) {
+            var len = list.length;
+            i = realPos(i, len);
+            j = (j == null) ? len - 1 : realPos(j, len);
+            
+            i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
+            j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
+            
+            if (i > j) return "";
+            
+            var buf = new StringBuf();
+            for (idx in i...j + 1) {
+                if (idx > i) buf.add(sep);
+                buf.add(Std.string(list[idx]));
+            }
+            return buf.toString();
+        } else {
+            throw "bad argument #1 to 'concat' (table expected)";
         }
-        return buf.toString();
     }
 
     // table.insert(list, pos, value) 或 table.insert(list, value)
@@ -38,77 +65,185 @@ class LuaTableLib {
         if (args.length < 2) throw "insert requires at least 2 arguments";
         
         var list = args[0];
-        if (!Std.is(list, Array)) throw "bad argument #1 to 'insert' (table expected)";
+        var value:Dynamic;
         
-        var pos:Int, value:Dynamic;
         if (args.length == 2) {
             value = args[1];
-            list.push(value);
+            // 如果是LuaTable，使用push方法
+            if (Std.isOfType(list, LuaTable)) {
+                cast(list, LuaTable<Dynamic>).push(value);
+            } else if (Std.isOfType(list, Array)) {
+                list.push(value);
+            } else {
+                throw "bad argument #1 to 'insert' (table expected)";
+            }
         } else {
-            pos = LuaCheckType.checkInteger(args[1]);
+            var pos:Int = LuaCheckType.checkInteger(args[1]);
             value = args[2];
-            var idx = realPos(pos, list.length);
-            list.insert(idx, value);
+            
+            // 如果是LuaTable，需要实现insert逻辑
+            if (Std.isOfType(list, LuaTable)) {
+                var table = cast(list, LuaTable<Dynamic>);
+                // 简化实现：在指定位置插入
+                var len = table.length;
+                var idx = realPos(pos, len);
+                
+                // 将idx位置之后的元素后移
+                for (i in len...idx + 1) {
+                    table.set(i + 1, table.get(i));
+                }
+                table.set(idx + 1, value);
+            } else if (Std.isOfType(list, Array)) {
+                var idx = realPos(pos, list.length);
+                list.insert(idx, value);
+            } else {
+                throw "bad argument #1 to 'insert' (table expected)";
+            }
         }
     }
 
     // table.remove(list, pos?)
-    public static function lualib_remove(list:Array<Dynamic>, ?pos:Int):Dynamic {
-        if (list == null) return null;
+    @:multiArgs
+    public static function lualib_remove(args:Array<Dynamic>):Dynamic {
+        if (args.length < 1) throw "remove requires at least 1 argument";
         
-        var len = list.length;
-        pos = (pos == null) ? len : LuaCheckType.checkInteger(pos);
-        var idx = realPos(pos, len);
+        var list = args[0];
+        var pos:Int = (args.length > 1) ? LuaCheckType.checkInteger(args[1]) : null;
         
-        idx = (idx < 0) ? 0 : (idx >= len) ? len - 1 : idx;
-        
-        return list.splice(idx, 1)[0];
+        if (Std.isOfType(list, LuaTable)) {
+            var table = cast(list, LuaTable<Dynamic>);
+            var len = table.length;
+            pos = (pos == null) ? len : pos;
+            var idx = realPos(pos, len);
+            idx = (idx < 0) ? 0 : (idx >= len) ? len - 1 : idx;
+            
+            var value = table.get(idx + 1);
+            table.remove(idx + 1);
+            return value;
+        } else if (Std.isOfType(list, Array)) {
+            var len = list.length;
+            pos = (pos == null) ? len : pos;
+            var idx = realPos(pos, len);
+            idx = (idx < 0) ? 0 : (idx >= len) ? len - 1 : idx;
+            
+            return list.splice(idx, 1)[0];
+        } else {
+            throw "bad argument #1 to 'remove' (table expected)";
+        }
     }
 
     // table.move(a1, f, e, t, a2?)
-    public static function lualib_move(a1:Array<Dynamic>, f:Int, e:Int, t:Int, ?a2:Array<Dynamic>):Void {
-        if (a1 == null) return;
+    @:multiArgs
+    public static function lualib_move(args:Array<Dynamic>):Void {
+        if (args.length < 4) throw "move requires at least 4 arguments";
         
-        var len = a1.length;
-        f = realPos(LuaCheckType.checkInteger(f), len);
-        e = realPos(LuaCheckType.checkInteger(e), len);
-        t = realPos(LuaCheckType.checkInteger(t), (a2 != null) ? a2.length : len);
+        var a1 = args[0];
+        var f:Int = LuaCheckType.checkInteger(args[1]);
+        var e:Int = LuaCheckType.checkInteger(args[2]);
+        var t:Int = LuaCheckType.checkInteger(args[3]);
+        var a2:Dynamic = (args.length > 4) ? args[4] : null;
         
-        f = (f < 0) ? 0 : (f >= len) ? len - 1 : f;
-        e = (e < 0) ? 0 : (e >= len) ? len - 1 : e;
-        
-        if (f > e) return;
-        
-        a2 = (a2 != null) ? a2 : a1;
-        var count = e - f + 1;
-        
-        while (a2.length < t + count) {
-            a2.push(null);
-        }
-        
-        for (i in 0...count) {
-            a2[t + i] = a1[f + i];
+        if (Std.isOfType(a1, LuaTable)) {
+            var table1 = cast(a1, LuaTable<Dynamic>);
+            var len = table1.length;
+            f = realPos(f, len);
+            e = realPos(e, len);
+            
+            f = (f < 0) ? 0 : (f >= len) ? len - 1 : f;
+            e = (e < 0) ? 0 : (e >= len) ? len - 1 : e;
+            
+            if (f > e) return;
+            
+            var table2 = (a2 != null && Std.isOfType(a2, LuaTable)) ? cast(a2, LuaTable<Dynamic>) : table1;
+            var count = e - f + 1;
+            
+            for (i in 0...count) {
+                var value = table1.get(f + i + 1);
+                table2.set(t + i, value);
+            }
+        } else if (Std.isOfType(a1, Array)) {
+            var len = a1.length;
+            f = realPos(f, len);
+            e = realPos(e, len);
+            t = realPos(t, (a2 != null && Std.isOfType(a2, Array)) ? a2.length : len);
+            
+            f = (f < 0) ? 0 : (f >= len) ? len - 1 : f;
+            e = (e < 0) ? 0 : (e >= len) ? len - 1 : e;
+            
+            if (f > e) return;
+            
+            a2 = (a2 != null) ? a2 : a1;
+            var count = e - f + 1;
+            
+            while (a2.length < t + count) {
+                a2.push(null);
+            }
+            
+            for (i in 0...count) {
+                a2[t + i] = a1[f + i];
+            }
+        } else {
+            throw "bad argument #1 to 'move' (table expected)";
         }
     }
 
     // table.sort(list, comp?)
-    public static function lualib_sort(list:Array<Dynamic>, ?comp:Dynamic):Void {
-        if (list == null) return;
+    @:multiArgs
+    public static function lualib_sort(args:Array<Dynamic>):Void {
+        if (args.length < 1) throw "sort requires at least 1 argument";
         
-        if (comp != null) {
-            if (!Reflect.isFunction(comp)) {
-                throw "bad argument #2 to 'sort' (function expected)";
+        var list = args[0];
+        var comp:Dynamic = (args.length > 1) ? args[1] : null;
+        
+        if (Std.isOfType(list, LuaTable)) {
+            var table = cast(list, LuaTable<Dynamic>);
+            var len = table.length;
+            
+            // 提取所有数组部分到临时数组
+            var arr:Array<Dynamic> = [];
+            for (i in 1...len + 1) {
+                arr.push(table.get(i));
             }
             
-            list.sort(function(a:Dynamic, b:Dynamic):Int {
-                var result = Reflect.callMethod(null, comp, [a, b]);
-                return (result == true) ? -1 : 1;
-            });
+            // 对临时数组进行排序
+            if (comp != null) {
+                if (!Reflect.isFunction(comp)) {
+                    throw "bad argument #2 to 'sort' (function expected)";
+                }
+                
+                arr.sort(function(a:Dynamic, b:Dynamic):Int {
+                    var result = Reflect.callMethod(null, comp, [a, b]);
+                    return (result == true) ? -1 : 1;
+                });
+            } else {
+                arr.sort(function(a:Dynamic, b:Dynamic):Int {
+                    if (a == b) return 0;
+                    return (a < b) ? -1 : 1;
+                });
+            }
+            
+            // 将排序后的数组写回表
+            for (i in 0...arr.length) {
+                table.set(i + 1, arr[i]);
+            }
+        } else if (Std.isOfType(list, Array)) {
+            if (comp != null) {
+                if (!Reflect.isFunction(comp)) {
+                    throw "bad argument #2 to 'sort' (function expected)";
+                }
+                
+                list.sort(function(a:Dynamic, b:Dynamic):Int {
+                    var result = Reflect.callMethod(null, comp, [a, b]);
+                    return (result == true) ? -1 : 1;
+                });
+            } else {
+                list.sort(function(a:Dynamic, b:Dynamic):Int {
+                    if (a == b) return 0;
+                    return (a < b) ? -1 : 1;
+                });
+            }
         } else {
-            list.sort(function(a:Dynamic, b:Dynamic):Int {
-                if (a == b) return 0;
-                return (a < b) ? -1 : 1;
-            });
+            throw "bad argument #1 to 'sort' (table expected)";
         }
     }
 
@@ -116,29 +251,54 @@ class LuaTableLib {
     @:multiArgs
     public static function lualib_pack(args:Array<Dynamic>):Dynamic {
         var table = args.copy();
-        table["n"] = args.length; // 设置长度字段
+        table.push(args.length); // 设置长度字段
         return table;
     }
 
     // table.unpack(list, i?, j?)
-    @:multiReturn
-    public static function lualib_unpack(list:Array<Dynamic>, ?i:Int = 1, ?j:Int):MultiReturn<haxe.Rest<Dynamic>> {
-        if (list == null) return multiReturn();
+    @:multiArgs
+    public static function lualib_unpack(args:Array<Dynamic>):LuaAndParams {
+        if (args.length < 1) throw "unpack requires at least 1 argument";
         
-        var len = list.length;
-        i = realPos(LuaCheckType.checkInteger(i), len);
-        j = (j == null) ? len - 1 : realPos(LuaCheckType.checkInteger(j), len);
+        var list = args[0];
+        var i:Int = (args.length > 1) ? LuaCheckType.checkInteger(args[1]) : 1;
+        var j:Int = (args.length > 2) ? LuaCheckType.checkInteger(args[2]) : null;
         
-        // 确保索引在有效范围内
-        i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
-        j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
-        
-        if (i > j) return multiReturn();
-        
-        var result = [];
-        for (idx in i...j + 1) {
-            result.push(list[idx]);
+        if (Std.isOfType(list, LuaTable)) {
+            var table = cast(list, LuaTable<Dynamic>);
+            var len = table.length;
+            i = realPos(i, len);
+            j = (j == null) ? len : realPos(j, len);
+            
+            // 确保索引在有效范围内
+            i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
+            j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
+            
+            if (i > j) return LuaAndParams.fromArray([]);
+            
+            var result = [];
+            for (idx in i...j + 1) {
+                result.push(table.get(idx + 1));
+            }
+            return LuaAndParams.fromArray(result);
+        } else if (Std.isOfType(list, Array)) {
+            var len = list.length;
+            i = realPos(i, len);
+            j = (j == null) ? len - 1 : realPos(j, len);
+            
+            // 确保索引在有效范围内
+            i = (i < 0) ? 0 : (i >= len) ? len - 1 : i;
+            j = (j < 0) ? 0 : (j >= len) ? len - 1 : j;
+            
+            if (i > j) return LuaAndParams.fromArray([]);
+            
+            var result = [];
+            for (idx in i...j + 1) {
+                result.push(list[idx]);
+            }
+            return LuaAndParams.fromArray(result);
+        } else {
+            throw "bad argument #1 to 'unpack' (table expected)";
         }
-        return multiReturn(...result);
     }
 }
