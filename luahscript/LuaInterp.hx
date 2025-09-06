@@ -291,7 +291,6 @@ class LuaInterp {
 		// fw lua lib
 		setLibs(map, "math", luahscript.lualibs.LuaMathLib);
 		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
-		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
 	}
 
 	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
