@@ -209,19 +209,117 @@ print()
 
 
 -- 12. 表操作
-print("12. 表操作（未完成）")
---[[local t = {3, 1, 4, 2}
-table.insert(t, 5)
-print("插入后:")
-for i, v in ipairs(t) do print(i, v) end
+print("12. 表操作")
 
-table.sort(t)
-print("排序后:")
-for i, v in ipairs(t) do print(i, v) end
+-- table.insert 测试
+local t1 = {3, 1, 4, 2}
+print("原始表:")
+for i, v in ipairs(t1) do print(i, v) end
 
-table.remove(t, 1)
+table.insert(t1, 5)
+print("在末尾插入5后:")
+for i, v in ipairs(t1) do print(i, v) end
+
+table.insert(t1, 2, 99)
+print("在位置2插入99后:")
+for i, v in ipairs(t1) do print(i, v) end
+
+-- table.remove 测试
+table.remove(t1, 1)
 print("删除第一个元素后:")
-for i, v in ipairs(t) do print(i, v) end
-print()]]
+for i, v in ipairs(t1) do print(i, v) end
+
+local removed = table.remove(t1)
+print("删除末尾元素:", removed)
+print("删除末尾后:")
+for i, v in ipairs(t1) do print(i, v) end
+
+-- table.sort 测试
+local t2 = {5, 2, 8, 1, 3}
+print("排序前:")
+for i, v in ipairs(t2) do print(i, v) end
+
+table.sort(t2)
+print("升序排序后:")
+for i, v in ipairs(t2) do print(i, v) end
+
+-- 自定义排序
+table.sort(t2, function(a, b) return a > b end)
+print("降序排序后:")
+for i, v in ipairs(t2) do print(i, v) end
+
+-- table.concat 测试
+local t3 = {"Hello", "World", "Lua"}
+print("连接字符串:", table.concat(t3))
+print("用空格连接:", table.concat(t3, " "))
+print("用逗号连接:", table.concat(t3, ", "))
+
+-- table.maxn 测试 (如果可用)
+local t4 = {10, 20, 30, [5] = 50}
+print("表长度:", #t4)
+if table.maxn then
+    print("最大索引:", table.maxn(t4))
+end
+
+-- table.unpack 测试
+local t5 = {"a", "b", "c"}
+local a, b, c = table.unpack(t5)
+print("解包结果:", a, b, c)
+
+-- table.move 测试 (如果可用)
+if table.move then
+    local t6 = {1, 2, 3, 4, 5}
+    table.move(t6, 1, 3, 5)
+    print("table.move后:")
+    for i, v in ipairs(t6) do print(i, v) end
+end
+
+print()
+
+-- 13. 高级表操作
+print("13. 高级表操作")
+
+-- 表作为字典使用
+local dict = {
+    apple = "苹果",
+    banana = "香蕉", 
+    orange = "橙子"
+}
+
+print("字典遍历:")
+for k, v in pairs(dict) do
+    print(k, "=", v)
+end
+
+-- 表的长度操作
+local arr = {10, 20, 30, nil, 50}
+print("数组长度:", #arr)
+
+-- 表的复制
+function tableCopy(original)
+    local copy = {}
+    for k, v in pairs(original) do
+        copy[k] = v
+    end
+    return copy
+end
+
+local original = {a = 1, b = 2}
+local copy = tableCopy(original)
+copy.c = 3
+print("原始表a:", original.a)
+print("复制表c:", copy.c)
+
+-- 表的合并
+function tableMerge(t1, t2)
+    local result = {}
+    for k, v in pairs(t1) do result[k] = v end
+    for k, v in pairs(t2) do result[k] = v end
+    return result
+end
+
+local merged = tableMerge({x = 1}, {y = 2, z = 3})
+print("合并后的表:")
+for k, v in pairs(merged) do print(k, v) end
 
 print("=== Lua 语法测试完成 ===")
