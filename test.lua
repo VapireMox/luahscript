@@ -209,9 +209,9 @@ print()
 
 
 -- 12. 表操作
-print("12. 表操作")
+print("12. 表操作(未完成)")
 
--- table.insert 测试
+--[[
 local t1 = {3, 1, 4, 2}
 print("原始表:")
 for i, v in ipairs(t1) do print(i, v) end
@@ -273,6 +273,7 @@ if table.move then
     print("table.move后:")
     for i, v in ipairs(t6) do print(i, v) end
 end
+]]
 
 print()
 
