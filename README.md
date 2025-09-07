@@ -63,7 +63,7 @@ class Main {
 
 ## Documentation
 
-- [Complete Documentation](./DOCUMENTATION.md)
+- [Complete Documentation](https://github.com/VapireMox/luahscript/blob/master/DOCUMENTATION.md)
 
 ## Usage Examples
 
