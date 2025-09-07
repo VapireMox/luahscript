@@ -1,7 +1,7 @@
 {
 	"name": "luahscript",
 	"description": "use hscript expression to make lua script",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"tags": ["hscript", "lua", "scripting"],
 	"releasenote": "Completion rate of 81%, fix some issues, will add lua-libs",
 	"license": "Apache",
