@@ -7,6 +7,7 @@ import luahscript.LuaInterp;
  */
 @:allow(luahscript.LuaTableIpairsIterator)
 @:allow(luahscript.LuaInterp)
+@:allow(luahscript.lualibs.LuaTableLib)
 class LuaTable<V> {
 	public static function fromArray<T>(arr:Array<T>):LuaTable<T> {
 		var lt = new LuaTable<T>();
@@ -74,11 +75,25 @@ class LuaTable<V> {
 		return result;
 	}
 
-	public function remove(key:Dynamic):Void {
+	public function insert(pos:Int, value:V) {
+		if(nextIndex >= pos && pos > 0) {
+			_keys.insert(pos - 1, pos);
+			_values.insert(pos - 1, value);
+			for(i in pos...nextIndex) {
+				_keys[i]++;
+			}
+			nextIndex++;
+			return;
+		}
+		throw "position out of bounds";
+	}
+
+	public function remove(key:Dynamic):Null<V> {
 		if(_keys.contains(key)) {
 			final index = _keys.indexOf(key);
+			final value:Null<V> = _values[index];
 			_keys.remove(key);
-			_values.remove(_values[index]);
+			_values.remove(value);
 			if(LuaCheckType.isInteger(key)) {
 				var int:Int = cast key;
 				if(int < nextIndex) {
@@ -88,7 +103,9 @@ class LuaTable<V> {
 					nextIndex--;
 				}
 			}
+			return value;
 		}
+		return null;
 	}
 
 	inline function fixKey() {

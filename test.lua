@@ -209,9 +209,8 @@ print()
 
 
 -- 12. 表操作
-print("12. 表操作(未完成)")
+print("12. 表操作")
 
---[[
 local t1 = {3, 1, 4, 2}
 print("原始表:")
 for i, v in ipairs(t1) do print(i, v) end
@@ -235,6 +234,7 @@ print("删除末尾后:")
 for i, v in ipairs(t1) do print(i, v) end
 
 -- table.sort 测试
+--[[
 local t2 = {5, 2, 8, 1, 3}
 print("排序前:")
 for i, v in ipairs(t2) do print(i, v) end
@@ -247,6 +247,7 @@ for i, v in ipairs(t2) do print(i, v) end
 table.sort(t2, function(a, b) return a > b end)
 print("降序排序后:")
 for i, v in ipairs(t2) do print(i, v) end
+]]
 
 -- table.concat 测试
 local t3 = {"Hello", "World", "Lua"}
@@ -254,20 +255,13 @@ print("连接字符串:", table.concat(t3))
 print("用空格连接:", table.concat(t3, " "))
 print("用逗号连接:", table.concat(t3, ", "))
 
--- table.maxn 测试 (如果可用)
-local t4 = {10, 20, 30, [5] = 50}
-print("表长度:", #t4)
-if table.maxn then
-    print("最大索引:", table.maxn(t4))
-end
-
 -- table.unpack 测试
 local t5 = {"a", "b", "c"}
 local a, b, c = table.unpack(t5)
 print("解包结果:", a, b, c)
 
 -- table.move 测试 (如果可用)
-if table.move then
+--[[if table.move then
     local t6 = {1, 2, 3, 4, 5}
     table.move(t6, 1, 3, 5)
     print("table.move后:")

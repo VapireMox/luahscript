@@ -130,7 +130,7 @@ class LuaInterp {
 		});
 		binops.set("..", function(a:Dynamic, b:Dynamic) {
 			if(isMetaTable(a) && a.metaTable.keyExists("__concat")) return cast(a, LuaTable<Dynamic>).__concat(a, b);
-			return Std.string(a) + Std.string(b);
+			return Std.string(LuaCheckType.checkNotSpecialValue(a)) + Std.string(LuaCheckType.checkNotSpecialValue(b));
 		});
 		binops.set("<", function(a:Dynamic, b:Dynamic) {
 			if(isMetaTable(a) && a.metaTable.keyExists("__lt")) return cast(a, LuaTable<Dynamic>).__lt(a, b);
@@ -188,8 +188,8 @@ class LuaInterp {
 			#elseif sys
 			Sys.println(buf.toString());
 			#else
-		throw new haxe.exceptions.NotImplementedException()
-		#end
+			throw new haxe.exceptions.NotImplementedException()
+			#end
 		}));
 		globals.set("type", function(v:Dynamic):String {
 			return LuaCheckType.checkType(v);
@@ -249,38 +249,27 @@ class LuaInterp {
 			return v1 == v2;
 		});
 		globals.set("rawget", function(table:LuaTable<Dynamic>, key:Dynamic, value:Dynamic) {
-			if(isTable(table)) return table.get(key);
-			throw "only used in table";
-			return null;
+			return LuaCheckType.checkTable(table).get(key);
 		});
 		globals.set("rawset", function(table:LuaTable<Dynamic>, key:Dynamic, value:Dynamic) {
-			if(isTable(table)) return table.set(key, value);
-			throw "only used in table";
+			return LuaCheckType.checkTable(table).set(key, value);
 		});
 		globals.set("rawlen", function(v:Dynamic):Null<Int> {
 			if(v.length != null && LuaCheckType.isInteger(v.length)) return v.length;
 			return null;
 		});
 		globals.set("pairs", function(it:Dynamic):KeyValueIterator<Dynamic, Dynamic> {
-			if(isTable(it)) {
-				return new LuaTable.LuaTablePairsIterator(cast it);
-			}
-			throw "It only used in table.";
-			return null;
+			return new LuaTable.LuaTablePairsIterator(LuaCheckType.checkTable(it));
 		});
 		globals.set("ipairs", function(it:Dynamic):KeyValueIterator<Dynamic, Dynamic> {
-			if(isTable(it)) {
-				return new LuaTable.LuaTableIpairsIterator(cast it);
-			}
-			throw "It only used in table.";
-			return null;
+			return new LuaTable.LuaTableIpairsIterator(LuaCheckType.checkTable(it));
 		});
 		globals.set("setmetatable", function(o:LuaTable<Dynamic>, meta:LuaTable<Dynamic>):LuaTable<Dynamic> {
-			o.metaTable = meta;
+			LuaCheckType.checkTable(o).metaTable = LuaCheckType.checkTable(meta);
 			return o;
 		});
 		globals.set("getmetatable", function(o:LuaTable<Dynamic>):LuaTable<Dynamic> {
-			return o.metaTable;
+			return LuaCheckType.checkTable(o).metaTable;
 		});
 
 		initLuaLibs(globals);
@@ -291,6 +280,7 @@ class LuaInterp {
 		// fw lua lib
 		setLibs(map, "math", luahscript.lualibs.LuaMathLib);
 		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
+		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
 	}
 
 	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
@@ -387,6 +377,7 @@ class LuaInterp {
 				return switch(prefix) {
 					case "#":
 						if(isMetaTable(v) && v.metaTable.keyExists("__len")) return cast(v, LuaTable<Dynamic>).__len(v);
+						else if(isTable(v)) @:privateAccess return cast(v, LuaTable<Dynamic>).nextIndex - 1;
 						if(v.length != null) v.length else 0;
 					case "not":
 						!LuaTools.luaBool(v);
@@ -1003,6 +994,13 @@ class LuaCheckType {
 		return false;
 	}
 
+	public inline static function isNotSpecialValue(v:Dynamic):Bool {
+		return switch(checkType(v)) {
+			case TNUMBER, TSTRING: true;
+			default: false;
+		}
+	}
+
 	public static function checkInteger(v:Dynamic):Null<Int> {
 		if(isInteger(v)) return Std.int(v);
 		throw "expected int, got " + checkType(v);
@@ -1025,6 +1023,15 @@ class LuaCheckType {
 		if(checkType(v) == TTABLE) return v;
 		throw "expected table, got " + checkType(v);
 		return null;
+	}
+
+	public static function checkNotSpecialValue(v:Dynamic):Null<Dynamic> {
+		return switch(checkType(v)) {
+			case TNUMBER, TSTRING: v;
+			case _:
+				throw "invalid value(" + checkType(v) + ")";
+				null;
+		}
 	}
 }
 
