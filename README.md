@@ -52,11 +52,11 @@ class Main {
         // Create an interpreter and execute the script
         var interp = new LuaInterp();
         
-        var result = interp.execute(expr, ["haxe is 'Great'!", 1314,]); // Input parameters for Lua in the form of an array
+        var result = interp.execute(expr);
         
         // Execute the returned function and trace the result
         // NOTE: The function from Lua are usually 'luahscript.LuaAndParams'. if want to obtain its value, call the "values" field, pls.
-        trace(result()); // Output: Hello, World!
+        trace(result("Hello Lua!", "5.4")); // Output: Hello, World!
     }
 }
 ```

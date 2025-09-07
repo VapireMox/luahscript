@@ -3,7 +3,7 @@
 	"description": "use hscript expression to make lua script",
 	"version": "0.0.3",
 	"tags": ["hscript", "lua", "scripting"],
-	"releasenote": "Completion rate of 81%, fix some issues, will add lua-libs",
+	"releasenote": "Completion rate of 90%(maybe), fix some issues, add run.n to testing, will add more lua-libs",
 	"license": "Apache",
 	"url": "https://github.com/VapireMox/luahscript",
 	"contributors": [
