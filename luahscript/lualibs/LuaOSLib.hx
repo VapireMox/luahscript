@@ -14,8 +14,8 @@ class LuaOSLib {
 		#if (sys)
 		return Sys.cpuTime();
 		#elseif js
-		if (untyped __js__("typeof performance !== 'undefined' && performance.now")) {
-			return untyped __js__("performance.now()") / 1000;
+		if (js.Syntax.code("typeof performance !== 'undefined' && performance.now")) {
+			return js.Syntax.code("performance.now()") / 1000;
 		}
 		return Date.now().getTime() / 1000;
 		#else
@@ -104,7 +104,7 @@ class LuaOSLib {
 		#elseif js
 		#if nodejs
 		try {
-			var child_process = untyped __js__("require('child_process')");
+			var child_process = js.Syntax.code("require('child_process')");
 			var result = untyped child_process.execSync(LuaCheckType.checkString(command), { encoding: 'utf8', stdio: 'pipe' });
 			// execSync throws on non-zero exit, so if we reach here, it was successful.
 			// To get exit code, we might need spawn or exec with a callback.
@@ -126,17 +126,13 @@ class LuaOSLib {
 	}
 
 	public static function lualib_exit(?code:Int = 0):Void {
-		#if (sys)
+		#if (sys || nodejs || hxnodejs)
 		Sys.exit(LuaCheckType.checkInteger(code));
 		#elseif js
 		// In browser JS, Sys.exit might not be available or behave as expected.
 		// Throwing an error can stop execution but isn't a true exit.
-		#if nodejs
-		untyped __js__("process.exit(" + LuaCheckType.checkInteger(code) + ")");
-		#else
 		code = LuaCheckType.checkInteger(code);
 		throw "os.exit called with code " + code + ". In browser, this throws an error instead of exiting.";
-		#end
 		#else
 		throw "os.exit is not supported on this platform.";
 		#end
@@ -144,16 +140,12 @@ class LuaOSLib {
 
 	public static function lualib_getenv(varname:String):Null<String> {
 		varname = LuaCheckType.checkString(varname);
-		#if sys
+		#if (sys || nodejs || hxnodejs)
 		return Sys.getEnv(varname);
 		#elseif js
-		#if nodejs
-		return untyped __js__("process.env[" + varname + "]");
-		#else
 		// Browser JS: no direct access to environment variables for security.
 		trace("Warning: os.getenv is not supported in this environment.");
 		return null;
-		#end
 		#else
 		trace("Warning: os.getenv is not supported on this platform.");
 		return null;
@@ -181,7 +173,7 @@ class LuaOSLib {
 		// JS (browser or Node.js) cannot directly delete files without specific APIs (e.g. Node.js 'fs')
 		#if nodejs
 		try {
-			var fs = untyped __js__("require('fs')");
+			var fs = js.Syntax.code("require('fs')");
 			var stats = untyped fs.statSync(filename);
 			if (stats.isDirectory()) {
 				untyped fs.rmdirSync(filename);
@@ -218,7 +210,7 @@ class LuaOSLib {
 		#elseif js
 		#if nodejs
 		try {
-			var fs = untyped __js__("require('fs')");
+			var fs = js.Syntax.code("require('fs')");
 			untyped fs.renameSync(oldname, newname);
 			return true;
 		} catch(e:Dynamic) {
@@ -276,7 +268,7 @@ class LuaOSLib {
 			tempDir = "."; // Fallback to current directory
 			#end
 		#elseif nodejs // Node.js specific
-			var os = untyped __js__("require('os')");
+			var os = js.Syntax.code("require('os')");
 			tempDir = untyped os.tmpdir();
 		#else
 			#if windows
@@ -295,7 +287,7 @@ class LuaOSLib {
 		return tempFileName;
 		#elseif js
 			#if nodejs
-			var os = untyped __js__("require('os')");
+			var os = js.Syntax.code("require('os')");
 			return untyped os.tmpdir() + "/luah_tmp_" + Date.now().getTime() + "_" + Math.floor(Math.random() * 1000000);
 			#else
 			// Browser JS: no standard way to get a temporary file path.

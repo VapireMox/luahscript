@@ -7,6 +7,12 @@
 -main Main
 -resource ../test.lua@test.lua
 -lib luahscript
+./targets/nodejs.hxml
+
+--next
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
 ./targets/cpp.hxml
 
 --next
