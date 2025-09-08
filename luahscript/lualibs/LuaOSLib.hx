@@ -2,7 +2,7 @@ package luahscript.lualibs;
 
 import luahscript.LuaInterp;
 
-#if (sys || nodejs || hxnodejs)
+#if (sys)
 import sys.io.File;
 import sys.io.Process;
 import sys.FileSystem;
@@ -11,7 +11,7 @@ import sys.FileSystem;
 @:build(luahscript.macros.LuaLibMacro.build())
 class LuaOSLib {
 	public static inline function lualib_clock():Float {
-		#if (sys || nodejs || hxnodejs)
+		#if (sys)
 		return Sys.cpuTime();
 		#elseif js
 		if (untyped __js__("typeof performance !== 'undefined' && performance.now")) {
@@ -93,7 +93,7 @@ class LuaOSLib {
 	}
 
 	public static function lualib_execute(command:String):Int {
-		#if (sys || nodejs || hxnodejs)
+		#if (sys)
 		try {
 			// Sys.command is simpler and directly returns exit code.
 			// new Process() allows more control if needed (e.g. reading stdout/stderr)
@@ -102,7 +102,7 @@ class LuaOSLib {
 			return -1; // Indicate an error, e.g. command not found
 		}
 		#elseif js
-		#if (nodejs || hxnodejs)
+		#if nodejs
 		try {
 			var child_process = untyped __js__("require('child_process')");
 			var result = untyped child_process.execSync(LuaCheckType.checkString(command), { encoding: 'utf8', stdio: 'pipe' });
@@ -126,12 +126,12 @@ class LuaOSLib {
 	}
 
 	public static function lualib_exit(?code:Int = 0):Void {
-		#if (sys || nodejs || hxnodejs)
+		#if (sys)
 		Sys.exit(LuaCheckType.checkInteger(code));
 		#elseif js
 		// In browser JS, Sys.exit might not be available or behave as expected.
 		// Throwing an error can stop execution but isn't a true exit.
-		#if (nodejs || hxnodejs)
+		#if nodejs
 		untyped __js__("process.exit(" + LuaCheckType.checkInteger(code) + ")");
 		#else
 		code = LuaCheckType.checkInteger(code);
@@ -144,10 +144,10 @@ class LuaOSLib {
 
 	public static function lualib_getenv(varname:String):Null<String> {
 		varname = LuaCheckType.checkString(varname);
-		#if (sys || nodejs || hxnodejs)
+		#if sys
 		return Sys.getEnv(varname);
 		#elseif js
-		#if (nodejs || hxnodejs)
+		#if nodejs
 		return untyped __js__("process.env[" + varname + "]");
 		#else
 		// Browser JS: no direct access to environment variables for security.
@@ -163,7 +163,7 @@ class LuaOSLib {
 	public static function lualib_remove(?filename:String):Bool {
 		if (filename == null) return false;
 		filename = LuaCheckType.checkString(filename);
-		#if (sys || nodejs || hxnodejs)
+		#if sys
 		try {
 			if (FileSystem.exists(filename)) {
 				if (FileSystem.isDirectory(filename)) {
@@ -179,7 +179,7 @@ class LuaOSLib {
 		}
 		#elseif js
 		// JS (browser or Node.js) cannot directly delete files without specific APIs (e.g. Node.js 'fs')
-		#if (nodejs || hxnodejs)
+		#if nodejs
 		try {
 			var fs = untyped __js__("require('fs')");
 			var stats = untyped fs.statSync(filename);
@@ -205,7 +205,7 @@ class LuaOSLib {
 	public static function lualib_rename(oldname:String, newname:String):Bool {
 		oldname = LuaCheckType.checkString(oldname);
 		newname = LuaCheckType.checkString(newname);
-		#if (sys || nodejs || hxnodejs)
+		#if sys 
 		try {
 			if (FileSystem.exists(oldname)) {
 				FileSystem.rename(oldname, newname);
@@ -216,7 +216,7 @@ class LuaOSLib {
 			return false; 
 		}
 		#elseif js
-		#if (nodejs || hxnodejs)
+		#if nodejs
 		try {
 			var fs = untyped __js__("require('fs')");
 			untyped fs.renameSync(oldname, newname);
@@ -263,7 +263,7 @@ class LuaOSLib {
 	}
 
 	public static function lualib_tmpname():String {
-		#if (sys || nodejs || hxnodejs)
+		#if sys
 		var tempDir = "";
 		#if (cpp || cs || java || php || python || hl) // Targets known to have Sys.tempDir()
 			tempDir = "/tmp";
@@ -275,7 +275,7 @@ class LuaOSLib {
 			#else
 			tempDir = "."; // Fallback to current directory
 			#end
-		#elseif (nodejs || hxnodejs) // Node.js specific
+		#elseif nodejs // Node.js specific
 			var os = untyped __js__("require('os')");
 			tempDir = untyped os.tmpdir();
 		#else
@@ -294,7 +294,7 @@ class LuaOSLib {
 		var tempFileName = tempDir + pathSep + "luah_tmp_" + uniqueId + "_" + Std.random(1000000);
 		return tempFileName;
 		#elseif js
-			#if (nodejs || hxnodejs)
+			#if nodejs
 			var os = untyped __js__("require('os')");
 			return untyped os.tmpdir() + "/luah_tmp_" + Date.now().getTime() + "_" + Math.floor(Math.random() * 1000000);
 			#else
@@ -356,3 +356,4 @@ class LuaOSLib {
 		return Math.floor((dayOfYear - firstMonday) / 7) + 1;
 	}
 }
+
