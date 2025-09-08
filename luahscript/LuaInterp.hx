@@ -282,7 +282,9 @@ class LuaInterp {
 		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
 		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
 		setLibs(map, "os", luahscript.lualibs.LuaOSLib);
-		setLibs(map, "io", luahscript.lualibs.LuaOSLib);
+		#if sys
+		setLibs(map, "io", luahscript.lualibs.LuaIOLib);
+		#end
 	}
 
 	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
