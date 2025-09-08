@@ -281,6 +281,7 @@ class LuaInterp {
 		setLibs(map, "math", luahscript.lualibs.LuaMathLib);
 		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
 		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
+		setLibs(map, "os", luahscript.lualibs.LuaOSLib);
 	}
 
 	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
@@ -1009,13 +1010,13 @@ class LuaCheckType {
 
 	public static function checkNumber(v:Dynamic):Null<Float> {
 		if(checkType(v) == TNUMBER) return v;
-		throw "expected int, got " + checkType(v);
+		throw "expected number, got " + checkType(v);
 		return null;
 	}
 
 	public static function checkString(v:Dynamic):Null<String> {
 		if(checkType(v) == TSTRING) return v;
-		throw "expected int, got " + checkType(v);
+		throw "expected string, got " + checkType(v);
 		return null;
 	}
 

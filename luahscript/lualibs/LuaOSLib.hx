@@ -10,7 +10,7 @@ import sys.FileSystem;
 
 @:build(luahscript.macros.LuaLibMacro.build())
 class LuaOSLib {
-	public static function lualib_clock():Float {
+	public static inline function lualib_clock():Float {
 		#if (sys || nodejs || hxnodejs)
 		return Sys.cpuTime();
 		#elseif js
@@ -25,26 +25,27 @@ class LuaOSLib {
 	}
 
 	public static function lualib_date(?format:String, ?time:Float):String {
-		var t:Float = (time != null) ? time : Date.now().getTime() / 1000;
+		format = LuaCheckType.checkString(format);
+		var t:Float = (time != null) ? LuaCheckType.checkNumber(time) : Date.now().getTime() / 1000;
 		var date = Date.fromTime(t * 1000);
 
 		if (format == null) {
 			return StringTools.lpad(Std.string(date.getMonth() + 1), "0", 2) + "/" +
-				   StringTools.lpad(Std.string(date.getDate()), "0", 2) + "/" +
-				   Std.string(date.getFullYear()).substr(2) + " " +
-				   StringTools.lpad(Std.string(date.getHours()), "0", 2) + ":" +
-				   StringTools.lpad(Std.string(date.getMinutes()), "0", 2) + ":" +
-				   StringTools.lpad(Std.string(date.getSeconds()), "0", 2);
+					StringTools.lpad(Std.string(date.getDate()), "0", 2) + "/" +
+					Std.string(date.getFullYear()).substr(2) + " " +
+					StringTools.lpad(Std.string(date.getHours()), "0", 2) + ":" +
+					StringTools.lpad(Std.string(date.getMinutes()), "0", 2) + ":" +
+					StringTools.lpad(Std.string(date.getSeconds()), "0", 2);
 		} else if (format == "!*t" || format == "*t") {
 			return "table:year=" + date.getFullYear() + 
-				   ",month=" + (date.getMonth() + 1) + 
-				   ",day=" + date.getDate() + 
-				   ",hour=" + date.getHours() + 
-				   ",min=" + date.getMinutes() + 
-				   ",sec=" + date.getSeconds() + 
-				   ",wday=" + (date.getDay() == 0 ? 7 : date.getDay()) + 
-				   ",yday=" + getDayOfYear(date) + 
-				   ",isdst=";
+					",month=" + (date.getMonth() + 1) + 
+					",day=" + date.getDate() + 
+					",hour=" + date.getHours() + 
+					",min=" + date.getMinutes() + 
+					",sec=" + date.getSeconds() + 
+					",wday=" + (date.getDay() == 0 ? 7 : date.getDay()) + 
+					",yday=" + getDayOfYear(date) + 
+					",isdst=";
 		} else {
 			var formattedDate = "";
 			var i = 0;
@@ -88,7 +89,7 @@ class LuaOSLib {
 	}
 
 	public static function lualib_difftime(t2:Float, t1:Float):Float {
-		return t2 - t1;
+		return LuaCheckType.checkNumber(t2) - LuaCheckType.checkNumber(t1);
 	}
 
 	public static function lualib_execute(command:String):Int {
@@ -96,7 +97,7 @@ class LuaOSLib {
 		try {
 			// Sys.command is simpler and directly returns exit code.
 			// new Process() allows more control if needed (e.g. reading stdout/stderr)
-			return Sys.command(command);
+			return Sys.command(LuaCheckType.checkString(command));
 		} catch (e:Dynamic) {
 			return -1; // Indicate an error, e.g. command not found
 		}
@@ -104,7 +105,7 @@ class LuaOSLib {
 		#if (nodejs || hxnodejs)
 		try {
 			var child_process = untyped __js__("require('child_process')");
-			var result = untyped child_process.execSync(command, { encoding: 'utf8', stdio: 'pipe' });
+			var result = untyped child_process.execSync(LuaCheckType.checkString(command), { encoding: 'utf8', stdio: 'pipe' });
 			// execSync throws on non-zero exit, so if we reach here, it was successful.
 			// To get exit code, we might need spawn or exec with a callback.
 			// For simplicity, assume success if no exception.
@@ -126,13 +127,14 @@ class LuaOSLib {
 
 	public static function lualib_exit(?code:Int = 0):Void {
 		#if (sys || nodejs || hxnodejs)
-		Sys.exit(code);
+		Sys.exit(LuaCheckType.checkInteger(code));
 		#elseif js
 		// In browser JS, Sys.exit might not be available or behave as expected.
 		// Throwing an error can stop execution but isn't a true exit.
 		#if (nodejs || hxnodejs)
-		untyped __js__("process.exit(" + code + ")");
+		untyped __js__("process.exit(" + LuaCheckType.checkInteger(code) + ")");
 		#else
+		code = LuaCheckType.checkInteger(code);
 		throw "os.exit called with code " + code + ". In browser, this throws an error instead of exiting.";
 		#end
 		#else
@@ -141,6 +143,7 @@ class LuaOSLib {
 	}
 
 	public static function lualib_getenv(varname:String):Null<String> {
+		varname = LuaCheckType.checkString(varname);
 		#if (sys || nodejs || hxnodejs)
 		return Sys.getEnv(varname);
 		#elseif js
@@ -159,6 +162,7 @@ class LuaOSLib {
 
 	public static function lualib_remove(?filename:String):Bool {
 		if (filename == null) return false;
+		filename = LuaCheckType.checkString(filename);
 		#if (sys || nodejs || hxnodejs)
 		try {
 			if (FileSystem.exists(filename)) {
@@ -199,6 +203,8 @@ class LuaOSLib {
 	}
 
 	public static function lualib_rename(oldname:String, newname:String):Bool {
+		oldname = LuaCheckType.checkString(oldname);
+		newname = LuaCheckType.checkString(newname);
 		#if (sys || nodejs || hxnodejs)
 		try {
 			if (FileSystem.exists(oldname)) {
@@ -239,6 +245,7 @@ class LuaOSLib {
 			// Called with no arguments, return current timestamp
 			return Date.now().getTime() / 1000;
 		}
+		table = LuaCheckType.checkTable(table);
 
 		var year = table.get("year");
 		var month = table.get("month"); // Lua month is 1-12
@@ -259,7 +266,7 @@ class LuaOSLib {
 		#if (sys || nodejs || hxnodejs)
 		var tempDir = "";
 		#if (cpp || cs || java || php || python || hl) // Targets known to have Sys.tempDir()
-			tempDir = Sys.tempDir();
+			tempDir = "/tmp";
 		#elseif neko
 			#if windows
 			tempDir = Sys.getEnv("TEMP") != null ? Sys.getEnv("TEMP") : "C:\\TEMP";

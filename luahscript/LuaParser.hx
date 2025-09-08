@@ -72,7 +72,7 @@ class LuaParser {
 			push(tk);
 			parseFullExpr(a);
 		}
-		return mk(EFunction([], mk(ETd(a), 1), {names: ["main"], isDouble: false}), 1);
+		return mk(EFunction(["..."], mk(ETd(a), 1), {names: ["main"], isDouble: false}), 1);
 	}
 
 	function getIdent():String {
