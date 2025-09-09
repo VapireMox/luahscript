@@ -3,7 +3,7 @@ package luahscript;
 import luahscript.*;
 import luahscript.LuaInterp; 
 
-//继承LuaInterp还是太……低能了，万一用execute你不就炸了吗？建议还是删了
+//没事 改成私有了
 class LHScript extends LuaInterp
 {
 	
@@ -54,6 +54,8 @@ class LHScript extends LuaInterp
 		#end
   }
   //lol
+
+  //public function call()
   
   public function executeCode(code:String, ?args:Array<Dynamic>):Dynamic {
     return super.execute(new LuaParser().parseFromString(code), args); 
