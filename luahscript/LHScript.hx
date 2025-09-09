@@ -5,6 +5,8 @@ import luahscript.LuaInterp;
 
 class LHScript extends LuaInterp
 {
+	public function new(){
+	   super();
        #if sys 
         //纪念用的
 		Lua_Helper_addCallback("require", function(moduleName:String):Dynamic {
