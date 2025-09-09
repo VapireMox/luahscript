@@ -172,6 +172,25 @@ end
 print(mymodule.greet("Lua"))
 print()
 
+local mymath = require("mymath")
+
+-- 使用模块功能
+print("5 + 3 =", mymath.add(5, 3))        -- 输出: 5 + 3 = 8
+print("10 - 4 =", mymath.sub(10, 4))      -- 输出: 10 - 4 = 6
+print("7 * 2 =", mymath.mul(7, 2))        -- 输出: 7 * 2 = 14
+print("15 / 3 =", mymath.div(15, 3))      -- 输出: 15 / 3 = 5.0
+
+-- 计算圆面积
+print("Circle area (r=5):", mymath.circle_area(5))  -- 输出: Circle area (r=5): 78.53975
+
+-- 错误处理示例
+local status, err = pcall(function()
+    print("10 / 0 =", mymath.div(10, 0))
+end)
+if not status then
+    print("Error:", err)  -- 输出: Error: Division by zero!
+end
+
 -- 9. 高级特性: 闭包
 print("9. 闭包")
 
