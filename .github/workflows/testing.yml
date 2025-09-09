@@ -25,18 +25,24 @@ jobs:
         with:
           haxe-version: 4.3.7
 
-      - name: install luahscript
+      - name: 'dev haxelib:luahscript'
         run: |
           haxelib dev luahscript .
-          haxelib install hxnodejs --quiet
+
+      - if: ${{ matrix.build-target == 'cpp' }}
+        name: 'install haxelib:hxcpp'
+        run: |
           haxelib install hxcpp --quiet
+
+      - if: ${{ matrix.build-target == 'cs' }}
+        name: 'install haxelib:hxcs'
+        run: |
           haxelib install hxcs --quiet
 
-      - name: install mono
-        if: ${{ startsWith(matrix.os-run, 'ubuntu') }}
+      - if: ${{ matrix.build-target == 'nodejs' }}
+        name: 'install haxelib:nodejs'
         run: |
-          apt install mono
-          
+          haxelib install hxnodejs --quiet
       
       - name: Run Haxe
         run: |
