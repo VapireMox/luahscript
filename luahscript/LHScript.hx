@@ -52,8 +52,9 @@ class LHScript extends LuaInterp
 		#end
   }
   //c
- override public function execute(code:String):Void{
-	super(codes = new LuaParser().parseFromString(code)); 
+  override public function execute(code:String):Void{
+	super.execute(new LuaParser().parseFromString(code)); 
+	
   }
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
   {
