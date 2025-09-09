@@ -3,7 +3,7 @@ package luahscript;
 import luahscript.*;
 import luahscript.LuaInterp; 
 
-//容我说一句，操你妈
+//我再提醒你一句，是集大成，不是把Interp给挤出去了
 class LHScript extends LuaInterp
 {
     public function new(){
