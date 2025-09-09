@@ -1,6 +1,6 @@
 package luahscript;
 // 有时间就彻底取代狗屎的Luajit
-import luahscript.*;
+import luahscript.LuaInterp; 
 
 class LHScript extends LuaInterp
 {
@@ -54,6 +54,6 @@ class LHScript extends LuaInterp
   //c
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Dynamic
   {
-    globals.set(func, args);
+    return globals.set(func, args);
   }
 }
