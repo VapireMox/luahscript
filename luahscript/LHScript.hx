@@ -1,5 +1,6 @@
 package luahscript;
 
+import luahscript.*;
 import luahscript.LuaInterp; 
 
 class LHScript extends LuaInterp
