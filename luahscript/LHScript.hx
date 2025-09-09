@@ -4,10 +4,13 @@ import luahscript.*;
 import luahscript.LuaInterp; 
 
 //我再提醒你一句，是集大成，不是把Interp给挤出去了
-class LHScript extends LuaInterp
+class LHScript
 {
+	public var Interp:LuaInterp;
+	private var loadedModules:Map<String, Dynamic>;
+	
     public function new(){
-	   super();
+	   Interp = new LuaInterp();
        #if sys 
         //纪念用的
 		Lua_Helper_addCallback("require", function(moduleName:String):Dynamic {
@@ -28,20 +31,20 @@ class LHScript extends LuaInterp
 			var parser = new LuaParser().parseFromString(content);
 			var moduleFuncExpr = parser;
 
-			this.globals.set("package", { loaded: loadedModules });
+			Interp.globals.set("package", { loaded: loadedModules });
 
-			this.expr(moduleFuncExpr);
-			var mainFunc:Dynamic = this.resolve("globalModules");
+			expr(moduleFuncExpr);
+			var mainFunc:Dynamic = Interp.resolve("globalModules");
 			if (mainFunc == null || LuaCheckType.checkType(mainFunc) != TFUNCTION) {
-				this.globals.remove("package");
+				Interp.globals.remove("package");
 				throw "Module " + moduleName + " did not define a main function.";
 			}
 
 			var callResult = try Reflect.callMethod(null, mainFunc, []) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
 			var result = callResult; 
 
-			this.globals.remove("globalModules");
-			this.globals.remove("package");
+			Interp.globals.remove("globalModules");
+			Interp.globals.remove("package");
 
 			if (result == null) {
 				throw "Module " + moduleName + " did not return a value.";
@@ -54,17 +57,17 @@ class LHScript extends LuaInterp
   }
   //lol
 
-  override public function call(fun:String, ?args:Array<Dynamic>):Dynamic
+  public function call(fun:String, ?args:Array<Dynamic>):Dynamic
   {
-	return call(fun, args);
+	return Interp.call(fun, args);
   }
   
   public function executeCode(code:String, ?args:Array<Dynamic>):Dynamic {
-    return super.execute(new LuaParser().parseFromString(code), args); 
+    return Interp.execute(new LuaParser().parseFromString(code), args); 
   }
 
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
   {
-    return globals.set(func, args);
+    return Interp.globals.set(func, args);
   }
 }
