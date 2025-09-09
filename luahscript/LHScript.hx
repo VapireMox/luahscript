@@ -1,5 +1,7 @@
 package luahscript;
 // 有时间就彻底取代狗屎的Luajit
+import luahscript.*;
+
 class LHScript extends LuaInterp
 {
   public function new(){
@@ -50,7 +52,7 @@ class LHScript extends LuaInterp
 		#end
   }
   //c
-  public function Lua_Helper_addCallback(func:String, args:Array<Dynamic>):Dynamic
+  public function Lua_Helper_addCallback(func:String, args:Dynamic):Dynamic
   {
     globals.set(func, args);
   }
