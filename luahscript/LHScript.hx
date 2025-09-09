@@ -56,7 +56,7 @@ class LHScript extends LuaInterp
   //lol
   
   public function executeCode(code:String, ?args:Array<Dynamic>):Dynamic {
-    super.execute(new LuaParser().parseFromString(code), args); 
+    return super.execute(new LuaParser().parseFromString(code), args); 
   }
 
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
