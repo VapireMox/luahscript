@@ -12,6 +12,8 @@ import sys.io.FileSeek;
 class LuaIOLib {
 	private static var fileHandles:Map<String, Dynamic> = new Map<String, Dynamic>();
 	private static var nextHandleId:Int = 0;
+	private static var defaultInputHandle:String = null;
+	private static var defaultOutputHandle:String = null;
 
 	private static function bytesToString(bytes:haxe.io.Bytes):String {
 		var buf = new StringBuf();
@@ -212,12 +214,68 @@ class LuaIOLib {
 		return FileSystem.stat(filePath).size;
 	}
 
-	//未实现
-	public static function lualib_input(?handle:Dynamic):Void {
+	public static function lualib_input(?handle:Dynamic):String {
+		if (handle == null) {
+			return defaultInputHandle;
+		}
 
+		var newHandle:String = null;
+		if (Std.isOfType(handle, String)) {
+			var handleString:String = cast handle;
+			if (fileHandles.exists(handleString)) {
+				var fileObj = fileHandles.get(handleString);
+				if (!Std.isOfType(fileObj, FileInput)) {
+					throw "Handle is not open for reading: " + handleString;
+				}
+				newHandle = handleString;
+			} else {
+				var currentDefault = defaultInputHandle;
+				if (currentDefault != null && fileHandles.exists(currentDefault)) {
+					var oldFileObj = fileHandles.get(currentDefault);
+					if(Std.isOfType(oldFileObj, FileInput)) (cast oldFileObj : FileInput).close();
+					else if(Std.isOfType(oldFileObj, FileOutput)) (cast oldFileObj : FileOutput).close();
+					fileHandles.remove(currentDefault);
+				}
+				defaultInputHandle = null;
+				newHandle = lualib_open(handleString, "r");
+			}
+		} else {
+			throw "Invalid input handle type: " + Type.getClassName(Type.getClass(handle));
+		}
+
+		defaultInputHandle = newHandle;
+		return defaultInputHandle;
 	}
 
-	public static function lualib_output(?handle:Dynamic):Void {
+	public static function lualib_output(?handle:Dynamic):String {
+		if (handle == null) {
+			return defaultOutputHandle;
+		}
 
+		var newHandle:String = null;
+		if (Std.isOfType(handle, String)) {
+			var handleString:String = cast handle;
+			if (fileHandles.exists(handleString)) {
+				var fileObj = fileHandles.get(handleString);
+				if (!Std.isOfType(fileObj, FileOutput)) {
+					throw "Handle is not open for writing: " + handleString;
+				}
+				newHandle = handleString;
+			} else {
+				var currentDefault = defaultOutputHandle;
+				if (currentDefault != null && fileHandles.exists(currentDefault)) {
+					var oldFileObj = fileHandles.get(currentDefault);
+					if(Std.isOfType(oldFileObj, FileOutput)) (cast oldFileObj : FileOutput).close();
+					else if(Std.isOfType(oldFileObj, FileInput)) (cast oldFileObj : FileInput).close();
+					fileHandles.remove(currentDefault);
+				}
+				defaultOutputHandle = null; 
+				newHandle = lualib_open(handleString, "w");
+			}
+		} else {
+			throw "Invalid output handle type: " + Type.getClassName(Type.getClass(handle));
+		}
+		defaultOutputHandle = newHandle;
+		return defaultOutputHandle;
 	}
 }
