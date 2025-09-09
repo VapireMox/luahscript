@@ -33,7 +33,7 @@ jobs:
           haxelib install hxcs --quiet
 
       - name: install mono
-        if: ${{ startsWith(matrix.os-run, "ubuntu") }}
+        if: ${{ startsWith(matrix.os-run, 'ubuntu') }}
         run: |
           apt install mono
           
