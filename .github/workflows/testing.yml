@@ -3,16 +3,8 @@
 
 name: TestLib
 
-# Controls when the action will run. 
-on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+# 没把握就别硬推
+on: workflow_dispatch
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -20,7 +12,12 @@ jobs:
 
   Test:
     name: Test
-    runs-on: ubuntu-24.04
+    runs-on: ${{matrix.os-run}}
+    strategy:
+      fail-fast: false
+      matrix:
+        os-run: ["ubuntu-24.04"]
+        build-target: ["cpp", "cs", "neko", "js", "nodejs", "interp"]
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -34,4 +31,4 @@ jobs:
       - name: Run Haxe
         run: |
           cd tests
-          haxe --next -main Main -cp .. -resource ../test.lua@test.lua -neko final_test.n && neko final_test.n
+          haxe build-${{matrix.build-target}}.hxml
