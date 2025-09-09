@@ -3,6 +3,7 @@ package luahscript;
 import luahscript.*;
 import luahscript.LuaInterp; 
 
+//继承LuaInterp还是太……低能了，万一用execute你不就炸了吗？建议还是删了
 class LHScript extends LuaInterp
 {
 	
