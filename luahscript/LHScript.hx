@@ -4,8 +4,8 @@ import luahscript.LuaInterp;
 
 class LHScript extends LuaInterp
 {
-  #if sys 
-    //纪念用的
+       #if sys 
+        //纪念用的
 		Lua_Helper_addCallback("require", function(moduleName:String):Dynamic {
 			if (loadedModules.exists(moduleName)) {
 				return loadedModules.get(moduleName);
@@ -49,6 +49,9 @@ class LHScript extends LuaInterp
 		#end
   }
   //c
+  public function execute(code:String):Void{
+	super(new LuaParser().parseFromString(code)); 
+  }
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
   {
     return globals.set(func, args);
