@@ -33,7 +33,7 @@ class LHScript
 
 			Interp.globals.set("package", { loaded: loadedModules });
 
-			this.expr(moduleFuncExpr);
+			LuaInterp.expr(moduleFuncExpr);
 			var mainFunc:Dynamic = Interp.resolve("globalModules");
 			if (mainFunc == null || LuaCheckType.checkType(mainFunc) != TFUNCTION) {
 				Interp.globals.remove("package");
