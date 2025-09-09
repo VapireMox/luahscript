@@ -9,10 +9,6 @@ class Main {
 		var input:String = haxe.Resource.getString("test.lua");
 		var parser = new LuaParser();
 		var interp = new LuaInterp();
-		try {
-			trace(interp.execute(parser.parseFromString(input))());
-		} catch(e) {
-			trace("Error: " + Std.string(e));
-		}
+		trace(interp.execute(parser.parseFromString(input))());
 	}
 }
