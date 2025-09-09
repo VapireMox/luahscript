@@ -29,17 +29,17 @@ jobs:
         run: |
           haxelib dev luahscript .
 
-      - if: ${{matrix.build-target}} == cpp
+      - if: ${{ matrix.build-target == cpp }}
         name: install hxcpp
         run: |
           haxelib install hxcpp
 
-      - if: ${{matrix.build-target}} == cs
+      - if: ${{ matrix.build-target == cs }}
         name: install hxcs
         run: |
           haxelib install hxcs
 
-      - if: ${{matrix.build-target}} == hxnodejs
+      - if: ${{ matrix.build-target == nodejs }}
         name: install hxnodejs
         run: |
           haxelib install hxnodejs
