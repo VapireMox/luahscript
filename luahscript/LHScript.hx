@@ -74,7 +74,7 @@ class LHScript
 			return ret;
 		}
 		catch (e:haxe.Exception) {
-			
+			throw "Call " + fun + " did not return a value.";
 		}
 		// @formatter:on
 		return null;
