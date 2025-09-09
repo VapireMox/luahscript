@@ -34,4 +34,4 @@ jobs:
       - name: Run Haxe
         run: |
           cd tests
-          haxe --next -main Main --cp .. -resource ../test.lua@test.lua --interp
+          haxe --next -main Main --cp . -resource ../test.lua@test.lua --interp
