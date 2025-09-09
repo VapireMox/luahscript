@@ -21,6 +21,7 @@ class LuaInterp {
 
 	private var locals:Map<String, LuaLocalVar>;
 	private var declared:Array<LuaDeclaredVar>;
+	private var loadedModules:Map<String, Dynamic>; // For package.loaded
 
 	var binops:Map<String, Dynamic->Dynamic->Dynamic>;
 
@@ -31,6 +32,7 @@ class LuaInterp {
 	public function new() {
 		var me = this;
 		binops = new Map();
+		loadedModules = new Map();
 		/**
 			["^"],
 			["not", "#"],
@@ -271,6 +273,49 @@ class LuaInterp {
 		globals.set("getmetatable", function(o:LuaTable<Dynamic>):LuaTable<Dynamic> {
 			return LuaCheckType.checkTable(o).metaTable;
 		});
+
+		#if sys
+		globals.set("require", function(moduleName:String):Dynamic {
+			if (loadedModules.exists(moduleName)) {
+				return loadedModules.get(moduleName);
+			}
+
+			var filePath = moduleName.split(".").join("/") + ".lua";
+			if (!sys.FileSystem.exists(filePath)) {
+				if (sys.FileSystem.exists("tests/" + filePath)) {
+					filePath = "tests/" + filePath;
+				} else {
+					throw "module '" + moduleName + "' not found";
+				}
+			}
+
+			var content = sys.io.File.getContent(filePath);
+			var parser = new LuaParser().parseFromString(content);
+			var moduleFuncExpr = parser;
+
+			this.globals.set("package", { loaded: loadedModules });
+
+			this.expr(moduleFuncExpr);
+			var mainFunc:Dynamic = this.resolve("main");
+			if (mainFunc == null || LuaCheckType.checkType(mainFunc) != TFUNCTION) {
+				this.globals.remove("package");
+				throw "Module " + moduleName + " did not define a main function.";
+			}
+
+			var callResult = try Reflect.callMethod(null, mainFunc, []) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
+			var result = callResult; 
+
+			this.globals.remove("main");
+			this.globals.remove("package");
+
+			if (result == null) {
+				throw "Module " + moduleName + " did not return a value.";
+			}
+
+			loadedModules.set(moduleName, result);
+			return result;
+		});
+		#end
 
 		initLuaLibs(globals);
 	}
