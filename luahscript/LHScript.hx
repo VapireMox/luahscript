@@ -7,7 +7,7 @@ class LHScript extends LuaInterp
 {
 	private var parsedCode:String;
     
-    override public function new(){
+    public function new(){
 	   super();
        #if sys 
         //纪念用的
@@ -55,7 +55,7 @@ class LHScript extends LuaInterp
   }
   //lol
   
-  public function executeCode(code:String, ?args:Array<Dynamic>):Void {
+  public function executeCode(code:String, ?args:Array<Dynamic>):String {
     super.execute(new LuaParser().parseFromString(code), args); 
   }
 
