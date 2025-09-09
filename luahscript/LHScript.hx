@@ -3,7 +3,7 @@ package luahscript;
 import luahscript.*;
 import luahscript.LuaInterp; 
 
-//我再提醒你一句，是集大成，不是把Interp给挤出去了
+@:access(luahscript.LuaInterp)
 class LHScript
 {
 	public var Interp:LuaInterp;

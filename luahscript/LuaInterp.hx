@@ -322,7 +322,7 @@ class LuaInterp {
 		return new LuaAndParams();
 	}
 
-	public function expr(e:LuaExpr, isLocal:Bool = false):Dynamic {
+	function expr(e:LuaExpr, isLocal:Bool = false):Dynamic {
 		this.curExpr = e;
 		switch(e.expr) {
 			case EConst(c):
