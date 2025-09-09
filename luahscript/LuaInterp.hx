@@ -691,28 +691,6 @@ class LuaInterp {
 		Reflect.setProperty(obj, f, value);
 	}
 
-	function call(fun:String, ?args:Array<Dynamic>):Dynamic {
-		if (args == null)
-			args = [];
-		
-		var ny:Dynamic = locals.get("func_" + fun); // function signature
-		var isFunction:Bool = false;
-		try {
-			isFunction = ny != null && Reflect.isFunction(ny);
-			if (!isFunction)
-				throw 'Tried to call a non-function, for "$fun"';
-
-			var ret = Reflect.callMethod(null, ny, args);
-			locals.set(fun, ret);
-			return ret;
-		}
-		catch (e:haxe.Exception) {
-			
-		}
-		// @formatter:on
-		return null;
-	}
-
 	function evalAssignOpExpr(e1:LuaExpr, e2:Dynamic, isLocal:Bool = false) {
 		switch(e1.expr) {
 			case EIdent(id):
