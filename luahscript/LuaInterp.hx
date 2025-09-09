@@ -692,17 +692,16 @@ class LuaInterp {
 		Reflect.setProperty(obj, f, value);
 	}
 
-	function call(fun: String, ?args:Array<Dynamic>):LuaCall {
+	function call(fun:String, ?args:Array<Dynamic>):LuaCall {
 		if (args == null)
 			args = [];
 		
-		var ny:Dynamic = locals.get("func_" + func); // function signature
+		var ny:Dynamic = locals.get("func_" + fun); // function signature
 		var isFunction:Bool = false;
 		try {
 			isFunction = ny != null && Reflect.isFunction(ny);
 			if (!isFunction)
 				throw 'Tried to call a non-function, for "$fun"';
-			// throw "Variable not found or not callable, for \"" + fun + "\"";
 
 			var ret = Reflect.callMethod(null, ny, args);
 			locals.set(fun, ret);
