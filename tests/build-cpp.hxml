@@ -1,0 +1,4 @@
+-main Main
+-resource ../test.lua@test.lua
+-lib luahscript
+./targets/cpp.hxml
