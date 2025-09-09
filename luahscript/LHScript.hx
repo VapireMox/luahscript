@@ -5,8 +5,13 @@ import luahscript.LuaInterp;
 
 class LHScript extends LuaInterp
 {
-	public function new(){
+	private var parsedCode:Array<LuaToken>;
+    
+	public function new(code:String = null){
 	   super();
+	   if (code != null) {
+            parsedCode = new LuaParser().parseFromString(code);
+       }
        #if sys 
         //纪念用的
 		Lua_Helper_addCallback("require", function(moduleName:String):Dynamic {
@@ -52,10 +57,20 @@ class LHScript extends LuaInterp
 		#end
   }
   //c
-  override public function execute(code:String):Void{
-	super.execute(new LuaParser().parseFromString(code)); 
-	
+    
+  override public function execute():Void {
+    if (parsedCode != null) {
+        super.execute(parsedCode);
+    } else {
+        super.execute();
+        }
   }
+    
+  public function executeCode(code:String):Void {
+    parsedCode = new LuaParser().parseFromString(code);
+    execute(); 
+  }
+
   public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
   {
     return globals.set(func, args);
