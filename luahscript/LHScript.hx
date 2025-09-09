@@ -5,7 +5,7 @@ import luahscript.LuaInterp;
 
 class LHScript extends LuaInterp
 {
-	private var parsedCode:Array<LuaToken>;
+	private var parsedCode:Array<luahscript.exprs.LuaToken>;
     
 	public function new(code:String = null){
 	   super();
