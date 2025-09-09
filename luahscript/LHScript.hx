@@ -6,7 +6,6 @@ import luahscript.LuaInterp;
 //容我说一句，操你妈
 class LHScript extends LuaInterp
 {
-	
     public function new(){
 	   super();
        #if sys 
@@ -55,7 +54,7 @@ class LHScript extends LuaInterp
   }
   //lol
 
-  public function call(fun:String, ?args:Array<Dynamic>):Dynamic
+  override public function call(fun:String, ?args:Array<Dynamic>):Dynamic
   {
 	return call(fun, args);
   }
