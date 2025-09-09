@@ -9,6 +9,6 @@ class Main {
 		var e = haxe.Resource.getString("test.lua");
 		var interp = new LHScript();
 		final f = interp.executeCode(e);
-		trace(f());
+		trace(f);
 	}
 }
