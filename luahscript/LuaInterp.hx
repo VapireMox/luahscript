@@ -21,8 +21,7 @@ class LuaInterp {
 
 	private var locals:Map<String, LuaLocalVar>;
 	private var declared:Array<LuaDeclaredVar>;
-	private var loadedModules:Map<String, Dynamic>; // For package.loaded
-
+	
 	var binops:Map<String, Dynamic->Dynamic->Dynamic>;
 
 	var curExpr:LuaExpr;
