@@ -31,7 +31,6 @@ class LuaInterp {
 	public function new() {
 		var me = this;
 		binops = new Map();
-		loadedModules = new Map();
 		/**
 			["^"],
 			["not", "#"],
@@ -299,8 +298,7 @@ class LuaInterp {
 		map.set(name, value);
 	}
 
-	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
-		triple_value = LuaAndParams.fromArray(args ?? []);
+	public function execute(expr:LuaExpr):Dynamic {
 		locals = new Map();
 		declared = new Array();
 		return this.expr(expr);
