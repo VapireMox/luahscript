@@ -300,7 +300,7 @@ class LuaInterp {
 		map.set(name, value);
 	}
 
-	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
+	function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
 		triple_value = LuaAndParams.fromArray(args ?? []);
 		locals = new Map();
 		declared = new Array();
@@ -690,6 +690,30 @@ class LuaInterp {
 	function set(obj:Dynamic, f:String, value:Dynamic, isDouble:Bool = false) {
 		if(isTable(obj)) return cast(obj, LuaTable<Dynamic>).__write(obj, f, value);
 		Reflect.setProperty(obj, f, value);
+	}
+
+	function call(fun: String, ?args:Array<Dynamic>):LuaCall {
+
+		if (args == null)
+			args = [];
+
+		// fun-ny
+		var ny: Dynamic = globals.get(fun); // function signature
+		var isFunction: Bool = false;
+		try {
+			isFunction = ny != null && Reflect.isFunction(ny);
+			if (!isFunction)
+				throw 'Tried to call a non-function, for "$fun"';
+			// throw "Variable not found or not callable, for \"" + fun + "\"";
+
+			final ret = Reflect.callMethod(null, ny, args);
+			return {funName: fun, signature: ny, returnValue: ret};
+		}
+		catch (e:haxe.Exception) {
+			
+		}
+		// @formatter:on
+		return null;
 	}
 
 	function evalAssignOpExpr(e1:LuaExpr, e2:Dynamic, isLocal:Bool = false) {
@@ -1139,4 +1163,9 @@ class Lua_tonumber {
 
 		return null;
 	}
+}
+class LuaCall {
+	public var funName: String;
+	public var signature: Dynamic;
+	public var returnValue: Dynamic;
 }
