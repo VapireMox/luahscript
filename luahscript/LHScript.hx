@@ -59,7 +59,25 @@ class LHScript
 
   public function call(fun:String, ?args:Array<Dynamic>):Dynamic
   {
-	return Interp.call(fun, args);
+	    if (args == null)
+			args = [];
+		
+		var ny:Dynamic = locals.get("func_" + fun); // function signature
+		var isFunction:Bool = false;
+		try {
+			isFunction = ny != null && Reflect.isFunction(ny);
+			if (!isFunction)
+				throw 'Tried to call a non-function, for "$fun"';
+
+			var ret = Reflect.callMethod(null, ny, args);
+			locals.set(fun, ret);
+			return ret;
+		}
+		catch (e:haxe.Exception) {
+			
+		}
+		// @formatter:on
+		return null;
   }
   
   public function executeCode(code:String, ?args:Array<Dynamic>):Dynamic {
