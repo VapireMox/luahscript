@@ -692,7 +692,7 @@ class LuaInterp {
 		Reflect.setProperty(obj, f, value);
 	}
 
-	function call(fun:String, ?args:Array<Dynamic>):LuaCall {
+	function call(fun:String, ?args:Array<Dynamic>):Dynamic {
 		if (args == null)
 			args = [];
 		
@@ -1162,8 +1162,4 @@ class Lua_tonumber {
 		return null;
 	}
 }
-class LuaCall {
-	public var funName: String;
-	public var signature: Dynamic;
-	public var returnValue: Dynamic;
-}
+
