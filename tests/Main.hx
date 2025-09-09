@@ -8,6 +8,6 @@ class Main {
 	public static function main() {
 		var e = haxe.Resource.getString("test.lua");
 		var interp = new LHScript();
-		trace(interp.executeCode(e));
+		trace(interp.execute(e));
 	}
 }
