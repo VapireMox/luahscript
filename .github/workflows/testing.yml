@@ -27,8 +27,6 @@ jobs:
 
       - name: 'dev haxelib:luahscript'
         run: |
-          sudo apt update
-          sudo apt install mono
           haxelib dev luahscript .
 
       - if: ${{ matrix.build-target == 'cpp' }}
