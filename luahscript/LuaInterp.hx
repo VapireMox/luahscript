@@ -693,12 +693,10 @@ class LuaInterp {
 	}
 
 	function call(fun: String, ?args:Array<Dynamic>):LuaCall {
-
 		if (args == null)
 			args = [];
-
-		// fun-ny
-		var ny:Dynamic = resolve("func_" + func); // function signature
+		
+		var ny:Dynamic = locals.get("func_" + func); // function signature
 		var isFunction:Bool = false;
 		try {
 			isFunction = ny != null && Reflect.isFunction(ny);
@@ -707,7 +705,7 @@ class LuaInterp {
 			// throw "Variable not found or not callable, for \"" + fun + "\"";
 
 			var ret = Reflect.callMethod(null, ny, args);
-			globals.set(fun, ret);
+			locals.set(fun, ret);
 			return ret;
 		}
 		catch (e:haxe.Exception) {
