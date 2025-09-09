@@ -300,7 +300,7 @@ class LuaInterp {
 		map.set(name, value);
 	}
 
-	function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
+	public function execute(expr:LuaExpr, ?args:Array<Dynamic>):Dynamic {
 		triple_value = LuaAndParams.fromArray(args ?? []);
 		locals = new Map();
 		declared = new Array();
@@ -698,16 +698,17 @@ class LuaInterp {
 			args = [];
 
 		// fun-ny
-		var ny: Dynamic = globals.get(fun); // function signature
-		var isFunction: Bool = false;
+		var ny:Dynamic = resolve("func_" + func); // function signature
+		var isFunction:Bool = false;
 		try {
 			isFunction = ny != null && Reflect.isFunction(ny);
 			if (!isFunction)
 				throw 'Tried to call a non-function, for "$fun"';
 			// throw "Variable not found or not callable, for \"" + fun + "\"";
 
-			final ret = Reflect.callMethod(null, ny, args);
-			return {funName: fun, signature: ny, returnValue: ret};
+			var ret = Reflect.callMethod(null, ny, args);
+			globals.set(fun, ret);
+			return ret;
 		}
 		catch (e:haxe.Exception) {
 			
