@@ -52,7 +52,7 @@ class LHScript extends LuaInterp
 		#end
   }
   //c
-  public function Lua_Helper_addCallback(func:String, args:Dynamic):Dynamic
+  public function Lua_Helper_addCallback(func:String, args:Dynamic):Void
   {
     return globals.set(func, args);
   }
