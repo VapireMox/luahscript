@@ -296,7 +296,7 @@ class LuaInterp {
 			this.globals.set("package", { loaded: loadedModules });
 
 			this.expr(moduleFuncExpr);
-			var mainFunc:Dynamic = this.resolve("main");
+			var mainFunc:Dynamic = this.resolve("mains");
 			if (mainFunc == null || LuaCheckType.checkType(mainFunc) != TFUNCTION) {
 				this.globals.remove("package");
 				throw "Module " + moduleName + " did not define a main function.";
@@ -305,7 +305,7 @@ class LuaInterp {
 			var callResult = try Reflect.callMethod(null, mainFunc, []) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
 			var result = callResult; 
 
-			this.globals.remove("main");
+			this.globals.remove("mains");
 			this.globals.remove("package");
 
 			if (result == null) {
