@@ -26,7 +26,10 @@ jobs:
         uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.7
-      
+
+      - name: install haxelibs
+        run: |
+          haxelib dev luahscript ../
       
       - name: Run Haxe
         run: |
