@@ -3,9 +3,6 @@ package luahscript.lualibs;
 import luahscript.LuaTable;
 import luahscript.LuaInterp;
 
-/*
- * unfinished: move, sort
-*/
 @:build(luahscript.macros.LuaLibMacro.build())
 class LuaTableLib {
 	public static function lualib_concat(table:LuaTable<Dynamic>, ?sep:Dynamic, ?i:Int = 1, ?j:Int):String {
