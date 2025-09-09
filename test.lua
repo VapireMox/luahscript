@@ -172,7 +172,7 @@ end
 print(mymodule.greet("Lua"))
 print()
 
-local mymath = require("mymath")
+local mymath = require("test_require")
 
 -- 使用模块功能
 print("5 + 3 =", mymath.add(5, 3))        -- 输出: 5 + 3 = 8
