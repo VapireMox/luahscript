@@ -28,21 +28,15 @@ jobs:
       - name: install luahscript
         run: |
           haxelib dev luahscript .
+          haxelib install hxnodejs --quiet
+          haxelib install hxcpp --quiet
+          haxelib install hxcs --quiet
 
-      - if: ${{ matrix.build-target == cpp }}
-        name: install hxcpp
+      - name: install mono
+        if: startsWith(matrix.os-run, "ubuntu")
         run: |
-          haxelib install hxcpp
-
-      - if: ${{ matrix.build-target == cs }}
-        name: install hxcs
-        run: |
-          haxelib install hxcs
-
-      - if: ${{ matrix.build-target == nodejs }}
-        name: install hxnodejs
-        run: |
-          haxelib install hxnodejs
+          apt install mono
+          
       
       - name: Run Haxe
         run: |
