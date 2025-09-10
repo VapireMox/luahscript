@@ -53,7 +53,7 @@ class LHScript {
         
         if (scriptContent != null) {
             this.originalScriptContent = scriptContent;
-            this.scriptContent = processScriptContent(scriptContent);
+            this.scriptContent = scriptContent;
         }
     }
     
@@ -85,23 +85,6 @@ class LHScript {
     }
     
     /**
-     * Check if a string contains Haxe syntax that needs conversion
-     */
-    private function containsHaxeSyntax(code:String):Bool {
-        // Check for hex numbers (0xFF0000)
-        if (~/0x[0-9a-fA-F]+/.match(code)) {
-            return true;
-        }
-        
-        // Check for chained method calls (object.property.method())
-        if (~/\w+\.\w+\.\w+\s*\(/.match(code)) {
-            return true;
-        }
-        
-        return false;
-    }
-    
-    /**
      * Convert Haxe syntax to Lua syntax
      */
     private function convertHaxeToLua(code:String):String {
@@ -123,7 +106,15 @@ class LHScript {
     public function setPrintHandler(callback:Int->String->Void):Void {
         onPrint = callback;
         // Override print function in Lua
-        
+        interp.globals.set("print", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+			var buf = new StringBuf();
+			for(i=>arg in args) {
+				buf.add(Std.string(arg));
+				if(i < args.length - 1) buf.add("\t");
+			}
+            if (onPrint != null) 
+                onPrint(0, buf.toString());
+		}));
     }
     
     /**
@@ -152,20 +143,8 @@ class LHScript {
 
     public function execute():Void {
         if (scriptContent != null) {
-            try {
-                var expr = parser.parseFromString(scriptContent);
-                interp.execute(expr)();
-            } catch (e:Dynamic) {
-                if (enableGlobalErrorHandling) {
-                    if (onError != null) {
-                        onError(Std.string(e));
-                    } else {
-                        trace("Lua error: " + e);
-                    }
-                } else {
-                    throw e;
-                }
-            }
+            var expr = parser.parseFromString(scriptContent);
+            interp.execute(expr)();
         } else {
             trace("LHScript: No script content to execute");
         }
@@ -430,13 +409,6 @@ class LHScript {
     
     public function getOriginalScriptContent():String {
         return originalScriptContent;
-    }
-    
-    public function setHaxeSyntaxEnabled(enable:Bool):Void {
-        this.enableHaxeSyntax = enable;
-        if (originalScriptContent != null) {
-            this.scriptContent = processScriptContent(originalScriptContent);
-        }
     }
     
     public function isHaxeSyntaxEnabled():Bool {
