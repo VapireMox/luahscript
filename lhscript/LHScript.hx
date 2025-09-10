@@ -130,7 +130,7 @@ class LHScript {
 				if(i < args.length - 1) buf.add("\t");
 			}
 			onPrint(0, buf.toString());
-		});
+		}));
     }
     
     /**
@@ -451,3 +451,4 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
+
