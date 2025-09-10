@@ -129,7 +129,8 @@ class LHScript {
 				buf.add(Std.string(arg));
 				if(i < args.length - 1) buf.add("\t");
 			}
-			onPrint(0, buf.toString());
+            if (onPrint != null) 
+                onPrint(0, buf.toString());
 		}));
     }
     
@@ -190,7 +191,15 @@ class LHScript {
         try {
             if (interp == null) return "FUNC_CONT";
             
-            var func = interp.resolve(funcName);
+            var func = null;
+            try {
+                func = interp.resolve(funcName);
+            } catch (e:Dynamic) {
+                return "FUNC_CONT";
+            }
+            if (func == null) {
+                return "FUNC_CONT";
+            }
             
             var result = Reflect.callMethod(null, func, args);
             return result;
@@ -317,13 +326,12 @@ class LHScript {
 
 			var filePath = moduleName.split(".").join("/") + ".lua";
             var file = '';
-			if (!sys.FileSystem.exists(filePath)) {
-				if (sys.FileSystem.exists(filePath)) {
-					file = filePath;
-				} else {
-					throw "module '" + moduleName + "' not found";
-				}
-			}
+            if (sys.FileSystem.exists(filePath)) {
+                file = filePath;
+            } else {
+                throw "module '" + moduleName + "' not found";
+            }
+			
 
 			var content = sys.io.File.getContent(file);
 			var parser = new LuaParser().parseFromString(content);
@@ -332,13 +340,13 @@ class LHScript {
 			setVar("package", { loaded: loadedModules });
 
 			interp.expr(moduleFuncExpr);
-			var mainFunc:Dynamic = getVar("main");
-			if (mainFunc == null || LuaCheckType.checkType(mainFunc) != TFUNCTION) {
+			var mainsFunc:Dynamic = interp.resolve('main');
+			if (mainsFunc == null || LuaCheckType.checkType(mainsFunc) != TFUNCTION) {
 				interp.globals.remove("package");
 				throw "Module " + moduleName + " did not define a main function.";
 			}
 
-			var callResult = try Reflect.callMethod(null, mainFunc, []) catch(e:haxe.Exception) throw interp.error(ECustom(Std.string(e)));
+			var callResult = try Reflect.callMethod(null, mainsFunc, []) catch(e:haxe.Exception) throw interp.error(ECustom(Std.string(e)));
 			var result = callResult; 
 
 			interp.globals.remove("main");
@@ -443,6 +451,3 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
-
-
-
