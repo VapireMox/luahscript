@@ -6,7 +6,7 @@ import luahscript.exprs.*;
 
 class LuaParser {
 	private static final logicOperators:Array<String> = ["and", "or", "not"];
-	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "repeat", "until", "end", "true", "false", "nil"];
+	private static final keywords:Array<String> = ["if", "else", "elseif", "for", "while", "function", "then", "do", "local", "return", "repeat", "until", "end", "true", "false", "nil", "goto"];
 
 	var content:String;
 
@@ -182,6 +182,9 @@ class LuaParser {
 	function parseExpr(?getValue:Bool = false):LuaExpr {
 		var tk = token();
 		return switch(tk) {
+			case TId("goto") if(!getValue):
+				final label = getIdent();
+				mk(EGoto(label));
 			case TId(id) if(id == "true" || id == "false" || id == "nil"):
 				return parseNextExpr(mk(EIdent(id)));
 			case TId(id) if(getValue && (id == "function" || (!logicOperators.contains(id) && !keywords.contains(id)))):
@@ -204,7 +207,7 @@ class LuaParser {
 						unexpected(tk);
 				}
 			case TOp("..."):
-				return parseNextExpr(mk(EConst(CTripleDot)), true);
+				parseNextExpr(mk(EConst(CTripleDot)), true);
 			case TOp(op) if(opPriority.get(op) < 0 || op == "-"):
 				if(op == "-") {
 					var e = parseExpr();
@@ -219,7 +222,11 @@ class LuaParser {
 							return makePrefix(op,e);
 					}
 				}
-				return makePrefix(op,parseExpr());
+				makePrefix(op,parseExpr());
+			case TQuadrupleDot:
+				var label = getIdent();
+				ensure(TQuadrupleDot);
+				mk(ELabel(label));
 			case TBrOpen:
 				parseObject();
 			case _:
@@ -264,7 +271,7 @@ class LuaParser {
 			// 本来我是想直接解析EAnd来获取arg的，不过想了想算了（
 			final oca = commaAnd;
 			commaAnd = true;
-			args.push(parseExpr());
+			args.push(parseExpr(true));
 			commaAnd = oca;
 			tk = token();
 			switch( tk ) {
@@ -470,10 +477,13 @@ class LuaParser {
 						}
 				}
 				var args = parseFunctionArgs();
+				final oaq = assignQuare;
+				assignQuare = false;
 				final oldInObject = inObject;
 				inObject = false;
 				final body = parseTd(false);
 				inObject = oldInObject;
+				assignQuare = oaq;
 				mk(EFunction(args, body, {names: names, isDouble: isDouble}));
 			case _ if(!keywords.contains(id) && !logicOperators.contains(id)):
 				mk(EIdent(id));
@@ -796,7 +806,13 @@ class LuaParser {
 			case "'".code:
 				TConst(CString(readString("'".code), SingleQuotes));
 			case ":".code:
-				TDoubleDot;
+				char = readPos();
+				if(char == ":".code) {
+					TQuadrupleDot;
+				} else {
+					pos--;
+					TDoubleDot;
+				}
 			case "{".code:
 				TBrOpen;
 			case "}".code:
@@ -841,41 +857,63 @@ class LuaParser {
 			case _ if(inNumber(char)):
 				var buf = new StringBuf();
 				buf.addChar(char);
+				var sureStartSex = if(char == "0".code) {
+					var nc = readPos();
+					if(nc == "x".code || nc == "X".code) {
+						buf.addChar(nc);
+						true;
+					} else {
+						pos--;
+						false;
+					}
+				} else false;
 				var isFloat = false;
 				var exp = false;
 				while(true) {
-					if(!inNumber(char = readPos()) && (isFloat || char != ".".code)) {
-						if(!exp && (char == "e".code || char == "E".code)) {
-							exp = true;
-							var prefix = false;
-							var number = false;
-							buf.addChar(char);
-							while(true) {
-								switch(char = readPos()) {
-									case "+".code, "-".code if(!prefix):
-										prefix = true;
-										buf.addChar(char);
-									case _ if(inNumber(char)):
-										number = true;
-										buf.addChar(char);
-									case _:
-										if(!number || inLetter(char) || char == ".".code) {
-											error(EInvalidChar(char));
-										}
-										pos--;
-										break;
-								}
+					if(sureStartSex) {
+						if(!inSex(char = readPos()) && (isFloat || char != ".".code)) {
+							if(inLetter(char) || char == ".".code) {
+								error(EInvalidChar(char));
 							}
-							continue;
+							pos--;
+							break;
 						}
-						if(inLetter(char) || char == ".".code) {
-							error(EUnexpected(String.fromCharCode(char)));
+						if(!isFloat && char == ".".code) isFloat = true;
+						buf.addChar(char);
+					} else {
+						if(!inNumber(char = readPos()) && (isFloat || char != ".".code)) {
+							if(!exp && (char == "e".code || char == "E".code)) {
+								exp = true;
+								var prefix = false;
+								var number = false;
+								buf.addChar(char);
+								while(true) {
+									switch(char = readPos()) {
+										case "+".code, "-".code if(!prefix):
+											prefix = true;
+											buf.addChar(char);
+										case _ if(inNumber(char)):
+											number = true;
+											buf.addChar(char);
+										case _:
+											if(!number || inLetter(char) || char == ".".code) {
+												error(EInvalidChar(char));
+											}
+											pos--;
+											break;
+									}
+								}
+								continue;
+							}
+							if(inLetter(char) || char == ".".code) {
+								error(EInvalidChar(char));
+							}
+							pos--;
+							break;
 						}
-						pos--;
-						break;
+						if(!isFloat && char == ".".code) isFloat = true;
+						buf.addChar(char);
 					}
-					if(!isFloat && char == ".".code) isFloat = true;
-					buf.addChar(char);
 				}
 				TConst(if(isFloat || exp) CFloat(Std.parseFloat(buf.toString())) else CInt(Std.parseInt(buf.toString())));
 			default:
@@ -945,6 +983,10 @@ class LuaParser {
 		return inNumber(char) || inLetter(char);
 	}
 
+	inline static function inSex(char:Int):Bool {
+		return inNumber(char) || (char >= 97 && char <= 102) || (char >= 65 && char <= 70);
+	}
+
 	inline static function constString(c:LuaConst):String {
 		return switch(c) {
 			case CInt(v): Std.string(v);
@@ -970,6 +1012,7 @@ class LuaParser {
 		case TBkOpen: "[";
 		case TBkClose: "]";
 		case TDoubleDot: ":";
+		case TQuadrupleDot: "::";
 		}
 	}
 }

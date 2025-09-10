@@ -5,7 +5,7 @@ import luahscript.exprs.LuaExpr;
 class LuaTools {
 	public static function iter(e:LuaExpr, f:LuaExpr->Void) {
 		switch(e.expr) {
-			case EConst(_), EIdent(_):
+			case EConst(_), EIdent(_), EGoto(_), ELabel(_):
 			case EBreak, EContinue, EIgnore:
 			case EParent(e):
 				f(e);
@@ -75,7 +75,7 @@ class LuaTools {
 		return {
 			line: e.line,
 			expr: switch(e.expr) {
-				case EConst(_), EIdent(_): e.expr;
+				case EConst(_), EIdent(_), EGoto(_), ELabel(_): e.expr;
 				case EBreak, EContinue, EIgnore: e.expr;
 				case EParent(e): EParent(ef(e));
 				case EField(e, f): EField(ef(e), f);

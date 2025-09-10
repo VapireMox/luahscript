@@ -15,4 +15,5 @@ enum LuaToken {
 	TBkOpen;
 	TBkClose;
 	TDoubleDot;
+	TQuadrupleDot;
 }

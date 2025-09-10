@@ -87,6 +87,13 @@ class LuaPrinter {
 		switch(expr.expr) {
 			case EConst(c):
 				constToString(c);
+			case EGoto(l):
+				add("goto ");
+				add(l);
+			case ELabel(label):
+				add(":: ");
+				add(label);
+				add(" ::");
 			case EIdent(v):
 				add(v);
 			case EParent(e):
@@ -325,7 +332,7 @@ class LuaPrinter {
 
 	public static function errorToString(e: LuaError, showPos: Bool = true) {
 		var message = switch (e.err) {
-			case EInvalidChar(c): "expected char near " + (StringTools.isEof(c) ? "'<\\eof>'" : Std.string(luahscript.LuaParser.inLu(c) ? String.fromCharCode(c) : "'<\\" + Std.string(c) + ">'"));
+			case EInvalidChar(c): "expected char near " + (StringTools.isEof(c) ? "'<\\eof>'" : Std.string(luahscript.LuaParser.inLu(c) ? "'" + String.fromCharCode(c) + "'" : "'<\\" + Std.string(c) + ">'"));
 			case EUnexpected(s): "expected symbol near '" + s + "'";
 			case EUnterminatedString(c): "unfinished string near '<\\" + (StringTools.isEof(c) ? "eof" : Std.string(c)) + ">'";
 			case EUnterminatedComment: "unfinished long comment near <eof>";

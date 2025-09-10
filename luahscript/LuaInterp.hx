@@ -608,7 +608,7 @@ class LuaInterp {
 					}
 				}
 				return f;
-			case EIgnore:
+			case EIgnore, EGoto(_), ELabel(_):
 			case EReturn(e):
 				var v:Dynamic = (e == null ? null : expr(e));
 				if(!isAndParams(v)) {
