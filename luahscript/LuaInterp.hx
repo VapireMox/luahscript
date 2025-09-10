@@ -271,8 +271,22 @@ class LuaInterp {
 		globals.set("getmetatable", function(o:LuaTable<Dynamic>):LuaTable<Dynamic> {
 			return LuaCheckType.checkTable(o).metaTable;
 		});
+		setDownlineG();
 
 		initLuaLibs(globals);
+	}
+
+	private inline function setDownlineG() {
+		var table:LuaTable<Dynamic> = new LuaTable();
+		var meta:LuaTable<Dynamic> = new LuaTable();
+		meta.set("__index", function(table:LuaTable<Dynamic>, n:Dynamic) {
+			return globals.get(n);
+		}, false);
+		meta.set("__newindex", function(table:LuaTable<Dynamic>, n:Dynamic, value:Dynamic) {
+			return globals.set(n, value);
+		}, false);
+		table.metaTable = meta;
+		this.globals.set("_G", table);
 	}
 
 	private static var lualibs = new Map<String, LuaTable<Dynamic>>();
@@ -625,7 +639,7 @@ class LuaInterp {
 					});
 					error(EInvalidAccess(sb, type));
 				}
-				if(isTable(o) && o.metaTable.keyExists("__read")) return cast(o, LuaTable<Dynamic>).__read(o, expr(index));
+				if(isTable(o)) return cast(o, LuaTable<Dynamic>).__read(o, expr(index));
 				return o[expr(index)];
 			case ETable(fls):
 				var table = new LuaTable<Dynamic>();

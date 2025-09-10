@@ -313,5 +313,18 @@ end
 local merged = tableMerge({x = 1}, {y = 2, z = 3})
 print("合并后的表:")
 for k, v in pairs(merged) do print(k, v) end
+print()
+
+print("14. _G使用")
+global_test1 = 12
+print("以_G['field']形式获取'global_test1'", _G["global_test1"])
+print("以_G.field形式获取'global_test1'", _G.global_test1)
+print("以_G.field形式修该global_test1( +1 )")
+_G.global_test1 = _G.global_test1 + 1
+print("结果: ", _G.global_test1)
+print("以_G['field']形式修该global_test1( +1 )")
+_G["global_test1"] = _G["global_test1"] + 1
+print("结果: ", _G["global_test1"])
+print("_G['field']以及_G.field以及原地址field是否相同", _G.global_test1 == global_test1 and _G["global_test1"] == global_test1)
 
 print("=== Lua 语法测试完成 ===")
