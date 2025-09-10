@@ -90,10 +90,16 @@ class LuaPrinter {
 			case EGoto(l):
 				add("goto ");
 				add(l);
-			case ELabel(label):
-				add(":: ");
+			case ELabel(label, doit):
+				add("::" + (this.configure.normative ? " " : ""));
 				add(label);
-				add(" ::");
+				add((this.configure.normative ? " " : "") + "::");
+				if(doit != null) {
+					if(!this.configure.focusOneLine && this.configure.normative) add("\n" + indentCounts + "do");
+					else add(" do");
+					exprToString(doit);
+					add("end");
+				}
 			case EIdent(v):
 				add(v);
 			case EParent(e):

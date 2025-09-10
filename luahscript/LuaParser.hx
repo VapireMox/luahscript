@@ -223,9 +223,12 @@ class LuaParser {
 					}
 				}
 				makePrefix(op,parseExpr());
-			case TQuadrupleDot:
+			case TQuadrupleDot if(!getValue):
 				var label = getIdent();
 				ensure(TQuadrupleDot);
+				if(maybe(TId("do"))) {
+					return mk(ELabel(label, parseTd(false)));
+				}
 				mk(ELabel(label));
 			case TBrOpen:
 				parseObject();
