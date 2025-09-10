@@ -1,3 +1,3 @@
 {
-	"executes": ["build-cpp", "build-cs", "build-js", "build-nodejs", "build-neko", "build-interp"]
+	"executes": ["build-cpp", "build-js", "build-nodejs", "build-neko", "build-interp"]
 }
