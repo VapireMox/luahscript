@@ -29,7 +29,7 @@ class LuaLibMacro {
 					type: macro:haxe.Rest<Dynamic>,
 				}],
 				expr: macro {
-					return luahscript.LuaAndParams.fromArray(cast args);
+					return luahscript.LuaAndParams.fromArray(args);
 				},
 				ret: Context.toComplexType(Context.getType("luahscript.LuaAndParams")),
 			}),
