@@ -33,6 +33,7 @@ jobs:
       - name: 'dev haxelib:luahscript'
         run: |
           haxelib dev luahscript .
+          haxelib dev lhscript .
 
       - if: ${{ matrix.build-target == 'cpp' }}
         name: 'install haxelib:hxcpp'
