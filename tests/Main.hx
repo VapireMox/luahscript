@@ -8,7 +8,9 @@ class Main {
 	public static function main() {
 		var input:String = haxe.Resource.getString("test.lua");
 		var parser = new LuaParser();
-		var interp = new LuaInterp();
-		trace(interp.execute(parser.parseFromString(input))());
+		var interp = new LHScript(input);
+		interp.execute();
+		trace("LUA_PRINT " + onPrint);
+		trace("LUA_ERROR " + onError);
 	}
 }
