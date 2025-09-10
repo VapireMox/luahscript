@@ -123,15 +123,7 @@ class LHScript {
     public function setPrintHandler(callback:Int->String->Void):Void {
         onPrint = callback;
         // Override print function in Lua
-        interp.globals.set("print", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
-			var buf = new StringBuf();
-			for(i=>arg in args) {
-				buf.add(Std.string(arg));
-				if(i < args.length - 1) buf.add("\t");
-			}
-            if (onPrint != null) 
-                onPrint(0, buf.toString());
-		}));
+        
     }
     
     /**
@@ -451,3 +443,4 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
+
