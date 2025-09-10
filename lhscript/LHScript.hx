@@ -191,10 +191,6 @@ class LHScript {
             if (interp == null) return "FUNC_CONT";
             
             var func = interp.resolve(funcName);
-			
-            if (func == null) {
-                return "FUNC_CONT";
-            }
             
             var result = Reflect.callMethod(null, func, args);
             return result;
@@ -447,5 +443,6 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
+
 
 
