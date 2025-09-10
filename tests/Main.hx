@@ -11,7 +11,7 @@ class Main {
 		var parser = new LuaParser();
 		var interp = new LHScript(input);
 		interp.execute();
-		trace("add() " + callFunc("add", [1, 1]));
+		trace("add() " + interp.callFunc("add", [1, 1]));
 		//trace("LUA_ERROR " + interp.onError);
 	}
 }
