@@ -2,6 +2,7 @@ package;
 
 import luahscript.LuaParser;
 import luahscript.LuaInterp;
+import lhscript.LHScript;
 import luahscript.exprs.LuaExpr;
 
 class Main {
