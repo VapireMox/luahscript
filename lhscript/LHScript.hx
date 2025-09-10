@@ -63,8 +63,10 @@ class LHScript {
     public static function fromFile(path:String):LHScript {
         #if openfl
         var content = openfl.Assets.getText(path);
-        #else
+        #elseif sys
         var content = sys.io.File.getContent(path);
+		#else
+		var content = path;
         #end
         return new LHScript(content);
     }
@@ -415,4 +417,5 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
+
 
