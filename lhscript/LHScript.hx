@@ -190,12 +190,8 @@ class LHScript {
         try {
             if (interp == null) return "FUNC_CONT";
             
-            var func = null;
-            try {
-                func = interp.resolve(funcName);
-            } catch (e:Dynamic) {
-                return "FUNC_CONT";
-            }
+            var func = interp.resolve(funcName);
+			
             if (func == null) {
                 return "FUNC_CONT";
             }
@@ -451,4 +447,5 @@ class LHScript {
         return enableHaxeSyntax;
     }
 }
+
 
