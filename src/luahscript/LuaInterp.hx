@@ -451,24 +451,37 @@ class LuaInterp {
 							error(EInvalidAccess(sb, type));
 						}
 
+						//愚蠢的neko
 						// Handle Class:new() syntax for Haxe class instantiation
 						if (isDouble && f == "new") {
-							if (!Std.isOfType(obj, Class)) {
-								var className = Type.getClassName(Type.getClass(obj));
-								if (className != null) {
-									var haxeClass = Type.resolveClass(className);
-									if (haxeClass != null) {
-										return try {
-											Type.createInstance(haxeClass, args);
-										} catch (err:haxe.Exception) {
-											throw error(ECustom("Failed to instantiate class " + className + ": " + Std.string(err)));
-										}
+							var haxeClass:Class<Dynamic> = null;
+							if (Std.isOfType(obj, Class)) {
+								haxeClass = cast obj;
+							} else {
+								var className:String = null;
+								if (Std.isOfType(obj, String)) {
+									className = cast obj;
+								} else {
+									if (obj != null) {
+										className = Type.getClassName(Type.getClass(obj));
 									}
 								}
-								return error(ECustom("Attempt to call 'new' on a non-class object: " + Std.string(obj)));
+
+								if (className != null) {
+									haxeClass = Type.resolveClass(className);
+								}
+								
+								if (haxeClass == null) {
+									return error(ECustom("Attempt to call 'new' on an object that is not a recognized class or type: " + Std.string(obj) + " (resolved class name: " + (className != null ? className : "null") + ")"));
+								}
 							}
-							var haxeClass:Class<Dynamic> = cast obj;
+							
 							return try {
+								#if neko
+								if (Reflect.hasField(haxeClass, "__new__")) {
+									return Reflect.callMethod(haxeClass, Reflect.field(haxeClass, "__new__"), args);
+								}
+								#end
 								Type.createInstance(haxeClass, args);
 							} catch (err:haxe.Exception) {
 								throw error(ECustom("Failed to instantiate class " + Type.getClassName(haxeClass) + ": " + Std.string(err)));
@@ -479,12 +492,12 @@ class LuaInterp {
 						if(func == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
-							LuaTools.recursion(e, function(e:LuaExpr) { // e should be ef here for correct context
+							LuaTools.recursion(e, function(e:LuaExpr) {
 								switch(e.expr) {
 									case EIdent(id):
 										sb = id;
 										type = if(locals.get(id) != null) LOCAL; else GLOBAL;
-									case EField(_, f_name): // renamed f to f_name to avoid conflict
+									case EField(_, f_name): 
 										sb = f_name;
 										type = FIELD;
 									case EArray(_, _):
@@ -496,10 +509,8 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						// Handle method calls on Haxe objects
 						if (isDouble) {
 							if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
-								// For Haxe objects, we need to bind the method to the object
 								if (Reflect.hasField(obj, f)) {
 									var method = Reflect.field(obj, f);
 									if (Reflect.isFunction(method)) {
@@ -510,11 +521,18 @@ class LuaInterp {
 										}
 									}
 								}
+								#if neko
+								return try {
+									Reflect.callMethod(obj, func, args);
+								} catch(e:haxe.Exception) {
+									throw error(ECustom("Error calling method '" + f + "' on Neko fallback: " + Std.string(e)));
+								}
+								#end
 							}
 							args.insert(0, obj);
 						}
 						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
-					case _: // Handles direct function calls like func()
+					case _:
 						var func:Dynamic = expr(e);
 						if(func == null) {
 							var sb:Null<String> = null;
