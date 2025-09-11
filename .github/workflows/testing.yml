@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         os-run: ["ubuntu-24.04"]
-        build-target: ["cpp", "neko", "js", "nodejs", "interp"]
+        build-target: ["cpp", "java", "neko", "js", "nodejs", "interp"]
     steps:
       - name: Checkout
         uses: actions/checkout@main
