@@ -30,9 +30,7 @@ haxelib git luahscript https://github.com/VapireMox/luahscript
 Here's a simple example showing how to parse and execute a Lua script:
 
 ```haxe
-import luahscript.LuaParser;
-import luahscript.LuaInterp;
-import luahscript.exprs.LuaExpr;
+import lhscript.LHScript;
 
 class Main {
     public static function main() {
@@ -45,14 +43,9 @@ class Main {
             return greet("World")
         ';
         
-        // Parse the Lua script
-        var parser = new LuaParser();
-        var expr = parser.parseFromString(luaScript);
-        
         // Create an interpreter and execute the script
-        var interp = new LuaInterp();
-        
-        var result = interp.execute(expr);
+        var interp = new LHScript(expr);
+        interp.execute();
         
         // Execute the returned function and trace the result
         // NOTE: The function from Lua are usually 'luahscript.LuaAndParams'. if want to obtain its value, call the "values" field, pls.
