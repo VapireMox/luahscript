@@ -338,4 +338,6 @@ print("new处理", hxP.greeting)
 local hxN
 hxN = Haxe:new("惹我光头强揍你没商量")
 print(hxN.greeting)
+
+hxN:gogogoWork();
 print("=== Lua 语法测试完成 ===")
