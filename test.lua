@@ -327,4 +327,8 @@ _G["global_test1"] = _G["global_test1"] + 1
 print("结果: ", _G["global_test1"])
 print("_G['field']以及_G.field以及原地址field是否相同", _G.global_test1 == global_test1 and _G["global_test1"] == global_test1)
 
+print("15. Haxe类测试")
+local hx = Haxe:new()
+print("haxe 文本获取", hx.greeting)
+print("haxe add函数", hx.add(5,5))
 print("=== Lua 语法测试完成 ===")
