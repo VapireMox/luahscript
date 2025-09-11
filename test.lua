@@ -333,4 +333,6 @@ print("haxe 文本获取", hx.greeting)
 -- print("haxe 文本获取", hx:greeting)  别想的太多了 我真做这个变量处理就是那你（看的人）脑子进水 哈哈
 print("haxe add函数 ：字符", hx:add(5,5))
 print("haxe add函数 . 字符", hx.add(5,5))
+local hxP = Haxe:new("熊二：哈哈哈光头强既然是大傻子")
+print("new处理", hxP.greeting)
 print("=== Lua 语法测试完成 ===")
