@@ -4,6 +4,7 @@
 	"version": "0.0.4",
 	"tags": ["hscript", "lua", "scripting"],
 	"releasenote": "Completion rate of 92.5%(maybe), fix some issues, add about 'os', 'io' lua-libs",
+	"classPath": "src",
 	"license": "Apache",
 	"url": "https://github.com/VapireMox/luahscript",
 	"contributors": [

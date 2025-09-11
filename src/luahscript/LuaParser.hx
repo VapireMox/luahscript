@@ -528,7 +528,7 @@ class LuaParser {
 		var t = null;
 		while((t = token()) != TBrClose) {
 			push(t);
-			var kv = {key: null, v: null, haveBK: false};
+			var kv = {key: null, v: null, haveBK: false, endSemicolon: false};
 			if(maybe(TBkOpen)) {
 				kv.haveBK = true;
 				final oio = inObject;
@@ -558,6 +558,8 @@ class LuaParser {
 			var t = token();
 			switch(t) {
 				case TComma:
+				case TSemicolon:
+					kv.endSemicolon = true;
 				case TBrClose:
 					push(t);
 				case _:

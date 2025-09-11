@@ -265,7 +265,7 @@ class LuaPrinter {
 					}
 					exprToString(byd.v);
 					if(i < fl.length - 1) {
-						add(",");
+						add((byd.endSemicolon == true ? ";" : ","));
 						if(this.configure.normative) add();
 					}
 				}

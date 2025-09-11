@@ -10,6 +10,13 @@ typedef LuaExpr = {
 	var line:Int;
 }
 
+typedef LuaTableConstructor = {
+	var v: LuaExpr;
+	var ?key:LuaExpr;
+	var ?haveBK:Bool;
+	var ?endSemicolon:Bool;
+}
+
 enum LuaExprDef {
 	EConst(c:LuaConst);
 	EIdent(v:String);
@@ -34,5 +41,5 @@ enum LuaExprDef {
 	EIgnore;
 	EReturn(?e:LuaExpr);
 	EArray(e:LuaExpr, index:LuaExpr);
-	ETable(fl:Array<{var v: LuaExpr; var ?key:LuaExpr; var ?haveBK:Bool;}>);
+	ETable(fl:Array<LuaTableConstructor>);
 }
