@@ -480,6 +480,8 @@ class LuaParser {
 						}
 				}
 				var args = parseFunctionArgs();
+				final ca = commaAnd;
+				commaAnd = false;
 				final oaq = assignQuare;
 				assignQuare = false;
 				final oldInObject = inObject;
@@ -487,6 +489,7 @@ class LuaParser {
 				final body = parseTd(false);
 				inObject = oldInObject;
 				assignQuare = oaq;
+				commaAnd = ca;
 				mk(EFunction(args, body, {names: names, isDouble: isDouble}));
 			case _ if(!keywords.contains(id) && !logicOperators.contains(id)):
 				mk(EIdent(id));
