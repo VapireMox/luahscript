@@ -511,14 +511,12 @@ class LuaInterp {
 						}
 						if (isDouble) {
 							if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
-								if (Reflect.hasField(obj, f)) {
-									var method = Reflect.field(obj, f);
-									if (Reflect.isFunction(method)) {
-										return try {
-											Reflect.callMethod(obj, method, args);
-										} catch(e:haxe.Exception) {
-											throw error(ECustom("Error calling method '" + f + "': " + Std.string(e)));
-										}
+								var method = Reflect.getProperty(obj, f);
+								if (Reflect.isFunction(method)) {
+									return try {
+										Reflect.callMethod(obj, method, args);
+									} catch(e:haxe.Exception) {
+										throw error(ECustom("Error calling method '" + f + "': " + Std.string(e)));
 									}
 								}
 								#if neko
