@@ -296,6 +296,7 @@ class LuaInterp {
 		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
 		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
 		setLibs(map, "os", luahscript.lualibs.LuaOSLib);
+		//setLibs(map, "coroutine", luahscript.lualibs.LuaCoroutineLib);
 		#if sys
 		setLibs(map, "io", luahscript.lualibs.LuaIOLib);
 		#end
@@ -421,8 +422,14 @@ class LuaInterp {
 				}
 
 				switch(e.expr) {
-					case EField(ef, f, isDouble): // Handles obj:method() and obj.method()
-						var obj:Dynamic = expr(ef);
+					case EField(ef, f, isDouble):
+						var obj:Dynamic;
+						if(ef.expr.match(ECall(_))) {
+							obj = expr(ef); 
+						} else {
+							obj = expr(ef);
+						}
+						
 						if(obj == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
@@ -431,8 +438,8 @@ class LuaInterp {
 									case EIdent(id):
 										sb = id;
 										type = if(locals.get(id) != null) LOCAL; else GLOBAL;
-									case EField(_, f):
-										sb = f;
+									case EField(_, f_val):
+										sb = f_val;
 										type = FIELD;
 									case EArray(_, _):
 										sb = 'integer index';
@@ -444,7 +451,6 @@ class LuaInterp {
 							error(EInvalidAccess(sb, type));
 						}
 
-						// Handle Class:new() syntax for Haxe class instantiation
 						if (isDouble && f == "new") {
 							if (!Std.isOfType(obj, Class)) {
 								return error(ECustom("Attempt to call 'new' on a non-class object: " + Std.string(obj)));
@@ -461,12 +467,12 @@ class LuaInterp {
 						if(func == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
-							LuaTools.recursion(e, function(e:LuaExpr) { // e should be ef here for correct context
+							LuaTools.recursion(e, function(e:LuaExpr) {
 								switch(e.expr) {
 									case EIdent(id):
 										sb = id;
 										type = if(locals.get(id) != null) LOCAL; else GLOBAL;
-									case EField(_, f_name): // renamed f to f_name to avoid conflict
+									case EField(_, f_name):
 										sb = f_name;
 										type = FIELD;
 									case EArray(_, _):
@@ -478,9 +484,14 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						if(isDouble == true) args.insert(0, obj); // Use isDouble for consistency
-						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
-					case _: // Handles direct function calls like func()
+
+						var callResult = try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
+						// Support for method chaining: if a colon-called method returns nil, return the original object.
+						if (callResult == null && !isDouble) {
+							return obj;
+						}
+						return callResult;
+					case _: 
 						var func:Dynamic = expr(e);
 						if(func == null) {
 							var sb:Null<String> = null;
