@@ -419,8 +419,9 @@ class LuaInterp {
 					}
 					args.push(v);
 				}
+
 				switch(e.expr) {
-					case EField(ef, f, double):
+					case EField(ef, f, isDouble): // Handles obj:method() and obj.method()
 						var obj:Dynamic = expr(ef);
 						if(obj == null) {
 							var sb:Null<String> = null;
@@ -443,17 +444,30 @@ class LuaInterp {
 							error(EInvalidAccess(sb, type));
 						}
 
-						final func:Dynamic = get(obj, f, double);
+						// Handle Class:new() syntax for Haxe class instantiation
+						if (isDouble && f == "new") {
+							if (!Std.isOfType(obj, Class)) {
+								return error(ECustom("Attempt to call 'new' on a non-class object: " + Std.string(obj)));
+							}
+							var haxeClass:Class<Dynamic> = cast obj;
+							return try {
+								Type.createInstance(haxeClass, args);
+							} catch (err:haxe.Exception) {
+								throw error(ECustom("Failed to instantiate class " + Type.getClassName(haxeClass) + ": " + Std.string(err)));
+							}
+						}
+
+						final func:Dynamic = get(obj, f, isDouble);
 						if(func == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
-							LuaTools.recursion(e, function(e:LuaExpr) {
+							LuaTools.recursion(e, function(e:LuaExpr) { // e should be ef here for correct context
 								switch(e.expr) {
 									case EIdent(id):
 										sb = id;
 										type = if(locals.get(id) != null) LOCAL; else GLOBAL;
-									case EField(_, f):
-										sb = f;
+									case EField(_, f_name): // renamed f to f_name to avoid conflict
+										sb = f_name;
 										type = FIELD;
 									case EArray(_, _):
 										sb = 'integer index';
@@ -464,9 +478,9 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						if(double == true) args.insert(0, obj);
+						if(isDouble == true) args.insert(0, obj); // Use isDouble for consistency
 						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
-					case _:
+					case _: // Handles direct function calls like func()
 						var func:Dynamic = expr(e);
 						if(func == null) {
 							var sb:Null<String> = null;
@@ -1151,4 +1165,3 @@ class Lua_tonumber {
 		return null;
 	}
 }
-
