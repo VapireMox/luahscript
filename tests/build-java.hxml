@@ -1,4 +1,0 @@
--main Main
--resource ../test.lua@test.lua
--lib luahscript
-./targets/java.hxml

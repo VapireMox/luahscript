@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         os-run: ["ubuntu-24.04"]
-        build-target: ["cpp", "java", "neko", "js", "nodejs", "interp"]
+        build-target: ["cpp", "neko", "js", "nodejs", "interp"]
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -37,11 +37,6 @@ jobs:
         name: 'install haxelib:hxcpp'
         run: |
           haxelib install hxcpp --quiet
-
-      - if: ${{ matrix.build-target == 'java' }}
-        name: 'install haxelib:hxjava'
-        run: |
-          haxelib install hxjava --quiet
 
       - if: ${{ matrix.build-target == 'nodejs' }}
         name: 'install haxelib:nodejs'
