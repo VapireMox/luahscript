@@ -340,4 +340,23 @@ hxN = Haxe:new("惹我光头强揍你没商量")
 print(hxN.greeting)
 
 hxN:gogogoWork();
+
+print("16. os语法测试")
+--自创sleep
+os.sleep(1)
+print("我是国王吉吉啊")
+os.sleep(1.2)
+print("哎？")
+os.sleep(1)
+print("你们怎么跑到我国王吉吉的家里来了！")
+os.sleep(1)
+print("熊大言")
+os.sleep(1)
+print("国王吉吉的家")
+os.sleep(1.3)
+print("臭猴子，这不是你的家！")
+os.sleep(1.1)
+print("熊二：这是熊大熊二的家！")
+os.sleep(1)
+--后面补充
 print("=== Lua 语法测试完成 ===")
