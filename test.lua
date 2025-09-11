@@ -335,4 +335,7 @@ print("haxe add函数 ：字符", hx:add(5,5))
 print("haxe add函数 . 字符", hx.add(5,5))
 local hxP = Haxe:new("熊二：哈哈哈光头强既然是大傻子")
 print("new处理", hxP.greeting)
+local hxN
+hxN = Haxe:new("惹我光头强揍你没商量")
+print(hxN.greeting)
 print("=== Lua 语法测试完成 ===")
