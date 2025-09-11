@@ -146,16 +146,9 @@ class LuaParser {
 				ae = ae.concat(parseExprAnds());
 				commaAnd = false;
 				return parseNextExpr(mk(EAnd(ae)));
-			case TDot, TDoubleDot, TColon if(!nonAccess):
+			case TDot, TDoubleDot if(!nonAccess):
 				var field = getIdent();
 				if(tk == TDoubleDot) needCall = true;
-				if(tk == TColon) {
-					ensure(TPOpen);
-					var args = parseExprList(TPClose);
-					var methodAccess = mk(EField(e1, field, false));
-					args.insert(0, e1);
-					return mk(ECall(methodAccess, args));
-				}
 				return parseNextExpr(mk(EField(e1,field, tk == TDoubleDot)));
 			case TPOpen:
 				var retional = false;
@@ -455,24 +448,24 @@ class LuaParser {
 				mk(EWhile(cond, body));
 			case "function":
 				var isDouble:Bool = false;
-					function ik(ae) {
-						var t = token();
-						switch(t) {
-							case TDot:
-								ae.push(getIdent());
-								ik(ae);
-							case TDoubleDot, TColon:
-								ae.push(getIdent());
-								t = token();
-								if(t != TPOpen) unexpected(t);
-								push(t);
-								isDouble = true;
-								ik(ae);
-							case TPOpen:
-							case _:
-								unexpected(t);
-						}
+				function ik(ae) {
+					var t = token();
+					switch(t) {
+						case TDot:
+							ae.push(getIdent());
+							ik(ae);
+						case TDoubleDot:
+							ae.push(getIdent());
+							t = token();
+							if(t != TPOpen) unexpected(t);
+							push(t);
+							isDouble = true;
+							ik(ae);
+						case TPOpen:
+						case _:
+							unexpected(t);
 					}
+				}
 				var names = [];
 				var t = token();
 				switch(t) {
@@ -487,6 +480,8 @@ class LuaParser {
 						}
 				}
 				var args = parseFunctionArgs();
+				final ca = commaAnd;
+				commaAnd = false;
 				final oaq = assignQuare;
 				assignQuare = false;
 				final oldInObject = inObject;
@@ -494,6 +489,7 @@ class LuaParser {
 				final body = parseTd(false);
 				inObject = oldInObject;
 				assignQuare = oaq;
+				commaAnd = ca;
 				mk(EFunction(args, body, {names: names, isDouble: isDouble}));
 			case _ if(!keywords.contains(id) && !logicOperators.contains(id)):
 				mk(EIdent(id));
@@ -821,7 +817,7 @@ class LuaParser {
 					TQuadrupleDot;
 				} else {
 					pos--;
-					TColon;
+					TDoubleDot;
 				}
 			case "{".code:
 				TBrOpen;
@@ -1017,7 +1013,6 @@ class LuaParser {
 		case TBrOpen: "{";
 		case TBrClose: "}";
 		case TDot: ".";
-		case TColon: ":";
 		case TComma: ",";
 		case TSemicolon: ";";
 		case TBkOpen: "[";

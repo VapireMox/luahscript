@@ -10,7 +10,6 @@ enum LuaToken {
 	TBrOpen;
 	TBrClose;
 	TDot;
-	TColon;
 	TComma;
 	TSemicolon;
 	TBkOpen;
