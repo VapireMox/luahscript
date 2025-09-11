@@ -330,5 +330,7 @@ print("_G['field']以及_G.field以及原地址field是否相同", _G.global_tes
 print("15. Haxe类测试")
 local hx = Haxe:new()
 print("haxe 文本获取", hx.greeting)
-print("haxe add函数", hx:add(5,5))
+-- print("haxe 文本获取", hx:greeting)  别想的太多了 我真做这个变量处理就是那你（看的人）脑子进水 哈哈
+print("haxe add函数 ：字符", hx:add(5,5))
+print("haxe add函数 . 字符", hx.add(5,5))
 print("=== Lua 语法测试完成 ===")
