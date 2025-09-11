@@ -32,11 +32,11 @@ Here's a simple example showing how to parse and execute a Lua script:
 ```haxe
 import lhscript.LHScript;
 
-class Main {
+class TestLHScript {
     public static function main() {
         // Define a simple Lua script
         var luaScript = '
-            local function greet(name)
+            function greet(name)
                 return "Hello, " .. name .. "!"
             end
             
@@ -44,12 +44,12 @@ class Main {
         ';
         
         // Create an interpreter and execute the script
-        var interp = new LHScript(expr);
+        var interp = new LHScript(luaScript);
         interp.execute();
         
         // Execute the returned function and trace the result
         // NOTE: The function from Lua are usually 'luahscript.LuaAndParams'. if want to obtain its value, call the "values" field, pls.
-        trace(result("Hello Lua!", "5.4")); // Output: Hello, World!
+        trace(interp.callFunc("greet", ['World'])); // Output: Hello, World!
     }
 }
 ```
