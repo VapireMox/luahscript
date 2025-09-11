@@ -355,7 +355,7 @@ class LuaInterp {
 				return expr(e);
 			case EField(e, f, isDouble):
 				var obj:Dynamic = expr(e);
-				if(e == null) {
+				if(obj == null) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(e, function(e:LuaExpr) {
@@ -376,6 +376,13 @@ class LuaInterp {
 					error(EInvalidAccess(sb, type));
 				}
 
+				// Special handling for Haxe object property access
+				if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
+					if (Reflect.hasField(obj, f)) {
+						return Reflect.field(obj, f);
+					}
+				}
+				
 				return get(obj, f, isDouble);
 			case ELocal(e):
 				return expr(e, true);
@@ -447,6 +454,17 @@ class LuaInterp {
 						// Handle Class:new() syntax for Haxe class instantiation
 						if (isDouble && f == "new") {
 							if (!Std.isOfType(obj, Class)) {
+								var className = Type.getClassName(Type.getClass(obj));
+								if (className != null) {
+									var haxeClass = Type.resolveClass(className);
+									if (haxeClass != null) {
+										return try {
+											Type.createInstance(haxeClass, args);
+										} catch (err:haxe.Exception) {
+											throw error(ECustom("Failed to instantiate class " + className + ": " + Std.string(err)));
+										}
+									}
+								}
 								return error(ECustom("Attempt to call 'new' on a non-class object: " + Std.string(obj)));
 							}
 							var haxeClass:Class<Dynamic> = cast obj;
@@ -478,7 +496,23 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						if(isDouble == true) args.insert(0, obj); // Use isDouble for consistency
+						// Handle method calls on Haxe objects
+						if (isDouble) {
+							if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
+								// For Haxe objects, we need to bind the method to the object
+								if (Reflect.hasField(obj, f)) {
+									var method = Reflect.field(obj, f);
+									if (Reflect.isFunction(method)) {
+										return try {
+											Reflect.callMethod(obj, method, args);
+										} catch(e:haxe.Exception) {
+											throw error(ECustom("Error calling method '" + f + "': " + Std.string(e)));
+										}
+									}
+								}
+							}
+							args.insert(0, obj);
+						}
 						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
 					case _: // Handles direct function calls like func()
 						var func:Dynamic = expr(e);
