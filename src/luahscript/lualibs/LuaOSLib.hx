@@ -300,6 +300,48 @@ class LuaOSLib {
 		#end
 	}
 
+	public static function lualib_sleep(seconds:Float):Void {
+        seconds = LuaCheckType.checkNumber(seconds);
+        
+        if (seconds <= 0) return;
+        
+        #if sys
+        Sys.sleep(seconds);
+        #elseif js
+        jsSleep(seconds);
+        #else
+        //备用
+        busyWait(seconds);
+        #end
+    }
+    
+    public static function lualib_delay(milliseconds:Int):Void {
+        milliseconds = LuaCheckType.checkInteger(milliseconds);
+        
+        if (milliseconds <= 0) return;
+        
+        #if sys
+        Sys.sleep(milliseconds / 1000.0);
+        #elseif js
+        jsSleep(milliseconds / 1000.0);
+        #else
+        busyWait(milliseconds / 1000.0);
+        #end
+    }
+    
+    #if js
+    private static function jsSleep(seconds:Float):Void {
+        var milliseconds = Std.int(seconds * 1000);
+        haxe.Timer.delay(() -> {}, milliseconds);
+    }
+    #end
+
+    private static function busyWait(seconds:Float):Void {
+        var start = haxe.Timer.stamp();
+        while (haxe.Timer.stamp() - start < seconds) {
+        }
+	}
+
 	private static function getShortDayName(day:Int):String {
 		return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day];
 	}
@@ -348,4 +390,5 @@ class LuaOSLib {
 		return Math.floor((dayOfYear - firstMonday) / 7) + 1;
 	}
 }
+
 
