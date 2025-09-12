@@ -34,17 +34,11 @@ class MyHaxeClass {
 
 	public function gogogoWork():Void {
 		trace("哼！！！");
-		Sys.sleep(0.6);
 		trace("光头强");
-		Sys.sleep(1);
 		trace("你实在是太可恶了");
-		Sys.sleep(1);
 		trace("俺要把这里的名片全部扯下来烧掉");
-		Sys.sleep(1.5);
 		trace("然后掰断他的电锯");
-		Sys.sleep(1);
 		trace("拍扁他的光头");
-		Sys.sleep(1);
 	}
 
     public function sayHello():String {
