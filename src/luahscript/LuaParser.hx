@@ -587,7 +587,7 @@ class LuaParser {
 		var esc = false;
 		while( true ) {
 			c = readPos();
-			if( StringTools.isEof(c) || c == 10) {
+			if( StringTools.isEof(c) || c == 10 || c == "\r".code) {
 				error(EUnterminatedString(c));
 				break;
 			}
