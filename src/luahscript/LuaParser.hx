@@ -936,7 +936,7 @@ class LuaParser {
 		if(i == 0 && (char != "[".code || char1 != "[".code)) {
 			pos -= 2;
 			while(true) {
-				if((char = readPos()) == 10 || StringTools.isEof(char)) {
+				if((char = readPos()) == 10 || char == "\r".code || StringTools.isEof(char)) {
 					pos--;
 					break;
 				}
