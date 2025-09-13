@@ -20,7 +20,7 @@ typedef LuaTableConstructor = {
 enum LuaExprDef {
 	EConst(c:LuaConst);
 	EIdent(v:String);
-	ELabel(label:String, ?doit:LuaExpr);
+	ELabel(label:String);
 	EGoto(label:String);
 	EParent(e:LuaExpr);
 	EField(e:LuaExpr, f:String, ?isDouble:Bool);

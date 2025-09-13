@@ -226,9 +226,6 @@ class LuaParser {
 			case TQuadrupleDot if(!getValue):
 				var label = getIdent();
 				ensure(TQuadrupleDot);
-				if(maybe(TId("do"))) {
-					return mk(ELabel(label, parseTd(false)));
-				}
 				mk(ELabel(label));
 			case TBrOpen:
 				parseObject();
@@ -404,6 +401,8 @@ class LuaParser {
 				}
 				ik(eelseif);
 				mk(EIf(cond, body, eelseif, eelse));
+			case "do":
+				parseTd(false);
 			case "for":
 				var v = getIdent();
 				if(maybe(TOp("="))) {
