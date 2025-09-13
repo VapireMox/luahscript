@@ -338,8 +338,8 @@ print("new处理", hxP.greeting)
 local hxN
 hxN = Haxe:new("惹我光头强揍你没商量")
 print(hxN.greeting)
-
-hxN:gogogoWork();
+print(hx)
+hxN:gogogoWork()
 
 print("16. os语法测试")
 --自创sleep
