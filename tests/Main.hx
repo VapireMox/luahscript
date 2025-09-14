@@ -9,7 +9,6 @@ class Main {
 	public static function main() {
 		var input:String = haxe.Resource.getString("test.lua");
 		var interp = new LHScript(input);
-		interp.setVar("Haxe", MyHaxeClass);
 
 		//自选两个 不过可以更好的处理print
 	    interp.setPrintHandler(function(line, msg) {
