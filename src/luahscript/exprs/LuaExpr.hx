@@ -28,7 +28,7 @@ enum LuaExprDef {
 	EBinop(op:String, e1:LuaExpr, e2:LuaExpr);
 	EPrefix(prefix:String, e:LuaExpr);
 	ECall(e:LuaExpr, params:Array<LuaExpr>);
-	ETd(ae:Array<LuaExpr>);
+	ETd(ae:Array<LuaExpr>, ?isBlock:Bool);
 	EAnd(ae:Array<LuaExpr>);
 	EIf(cond:LuaExpr, body:LuaExpr, ?eis:Array<LuaElseIf>, ?eel:LuaExpr);
 	ERepeat(body:LuaExpr, cond:LuaExpr);

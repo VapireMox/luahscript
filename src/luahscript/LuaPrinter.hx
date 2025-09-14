@@ -125,7 +125,8 @@ class LuaPrinter {
 					}
 				}
 				add(")");
-			case ETd(ae):
+			case ETd(ae, isBlock):
+				if(isBlock == true) add("do");
 				if(!this.configure.focusOneLine) add("\n");
 				else add();
 				increaseIndent();
@@ -140,6 +141,7 @@ class LuaPrinter {
 				}
 				originalSimplicityIndent();
 				if(!this.configure.focusOneLine) add(indentCounts);
+				if(isBlock == true) add("end");
 			case EAnd(ae):
 				for(i=>e in ae) {
 					exprToString(e);

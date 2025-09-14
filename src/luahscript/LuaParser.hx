@@ -402,7 +402,7 @@ class LuaParser {
 				ik(eelseif);
 				mk(EIf(cond, body, eelseif, eelse));
 			case "do":
-				parseTd(false);
+				parseTd(false, true, true);
 			case "for":
 				var v = getIdent();
 				if(maybe(TOp("="))) {
@@ -497,7 +497,7 @@ class LuaParser {
 		}
 	}
 
-	function parseTd(?utils:Array<String>, ?fudai:Bool = true, ?cEnd:Bool = true):LuaExpr {
+	function parseTd(?utils:Array<String>, ?fudai:Bool = true, ?cEnd:Bool = true, ?isBlock:Bool = false):LuaExpr {
 		utils = utils ?? [];
 		var ae:Array<LuaExpr> = [];
 		while(true) {
@@ -518,7 +518,7 @@ class LuaParser {
 
 			parseFullExpr(ae);
 		}
-		return mk(ETd(ae));
+		return mk(ETd(ae, isBlock));
 	}
 
 	function parseObject() {
