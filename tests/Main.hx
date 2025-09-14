@@ -25,27 +25,3 @@ class Main {
 		//trace("LUA_ERROR " + interp.onError);
 	}
 }
-class MyHaxeClass {
-    public var greeting:String;
-
-    public function new(greeting:String = "Hello from Haxe!") {
-        this.greeting = greeting;
-    }
-
-	public function gogogoWork():Void {
-		trace("哼！！！");
-		trace("光头强");
-		trace("你实在是太可恶了");
-		trace("俺要把这里的名片全部扯下来烧掉");
-		trace("然后掰断他的电锯");
-		trace("拍扁他的光头");
-	}
-
-    public function sayHello():String {
-        return greeting;
-    }
-
-    public function add(a:Int, b:Int):Int {
-        return a + b;
-    }
-}

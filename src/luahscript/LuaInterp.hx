@@ -451,43 +451,6 @@ class LuaInterp {
 							error(EInvalidAccess(sb, type));
 						}
 
-						//愚蠢的neko
-						// Handle Class:new() syntax for Haxe class instantiation
-						if (isDouble && f == "new") {
-							var haxeClass:Class<Dynamic> = null;
-							if (Std.isOfType(obj, Class)) {
-								haxeClass = cast obj;
-							} else {
-								var className:String = null;
-								if (Std.isOfType(obj, String)) {
-									className = cast obj;
-								} else {
-									if (obj != null) {
-										className = Type.getClassName(Type.getClass(obj));
-									}
-								}
-
-								if (className != null) {
-									haxeClass = Type.resolveClass(className);
-								}
-								
-								if (haxeClass == null) {
-									return error(ECustom("Attempt to call 'new' on an object that is not a recognized class or type: " + Std.string(obj) + " (resolved class name: " + (className != null ? className : "null") + ")"));
-								}
-							}
-							
-							return try {
-								#if neko
-								if (Reflect.hasField(haxeClass, "__new__")) {
-									return Reflect.callMethod(haxeClass, Reflect.field(haxeClass, "__new__"), args);
-								}
-								#end
-								Type.createInstance(haxeClass, args);
-							} catch (err:haxe.Exception) {
-								throw error(ECustom("Failed to instantiate class " + Type.getClassName(haxeClass) + ": " + Std.string(err)));
-							}
-						}
-
 						final func:Dynamic = get(obj, f, isDouble);
 						if(func == null) {
 							var sb:Null<String> = null;
@@ -509,27 +472,8 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						if (isDouble) {
-							if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
-								var method = Reflect.getProperty(obj, f);
-								if (Reflect.isFunction(method)) {
-									return try {
-										Reflect.callMethod(obj, method, args);
-									} catch(e:haxe.Exception) {
-										throw error(ECustom("Error calling method '" + f + "': " + Std.string(e)));
-									}
-								}
-								#if neko
-								return try {
-									Reflect.callMethod(obj, func, args);
-								} catch(e:haxe.Exception) {
-									throw error(ECustom("Error calling method '" + f + "' on Neko fallback: " + Std.string(e)));
-								}
-								#end
-							}
-							args.insert(0, obj);
-						}
-						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
+						if (isDouble) args.insert(0, obj);
+						return Reflect.callMethod(null, func, args);
 					case _:
 						var func:Dynamic = expr(e);
 						if(func == null) {
@@ -552,7 +496,7 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						return try Reflect.callMethod(null, func, args) catch(e:haxe.Exception) throw error(ECustom(Std.string(e)));
+						return Reflect.callMethod(null, func, args);
 				}
 			case ETd(ae):
 				var old = declared.length;

@@ -326,37 +326,4 @@ print("以_G['field']形式修该global_test1( +1 )")
 _G["global_test1"] = _G["global_test1"] + 1
 print("结果: ", _G["global_test1"])
 print("_G['field']以及_G.field以及原地址field是否相同", _G.global_test1 == global_test1 and _G["global_test1"] == global_test1)
-
-print("15. Haxe类测试")
-local hx = Haxe:new()
-print("haxe 文本获取", hx.greeting)
--- print("haxe 文本获取", hx:greeting)  别想的太多了 我真做这个变量处理就是那你（看的人）脑子进水 哈哈
-print("haxe add函数 ：字符", hx:add(5,5))
-print("haxe add函数 . 字符", hx.add(5,5))
-local hxP = Haxe:new("熊二：哈哈哈光头强既然是大傻子")
-print("new处理", hxP.greeting)
-local hxN
-hxN = Haxe:new("惹我光头强揍你没商量")
-print(hxN.greeting)
-print(hx)
-hxN:gogogoWork()
-
-print("16. os语法测试")
---自创sleep
-os.sleep(1)
-print("我是国王吉吉啊")
-os.sleep(1.2)
-print("哎？")
-os.sleep(1)
-print("你们怎么跑到我国王吉吉的家里来了！")
-os.sleep(1)
-print("熊大言")
-os.sleep(1)
-print("国王吉吉的家")
-os.sleep(1.3)
-print("臭猴子，这不是你的家！")
-os.sleep(1.1)
-print("熊二：这是熊大熊二的家！")
-os.sleep(1)
---后面补充
 print("=== Lua 语法测试完成 ===")
