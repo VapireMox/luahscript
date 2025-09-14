@@ -4,4 +4,5 @@ enum LuaStop {
 	SBreak;
 	SContinue;
 	SReturn;
+	SLabel;
 }

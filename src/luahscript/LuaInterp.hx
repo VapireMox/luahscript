@@ -6,7 +6,6 @@ import luahscript.exprs.LuaToken;
 import luahscript.exprs.*;
 import haxe.Constraints.IMap;
 
-
 typedef LuaLocalVar = {
 	var r: Dynamic;
 }
@@ -21,11 +20,15 @@ class LuaInterp {
 
 	private var locals:Map<String, LuaLocalVar>;
 	private var declared:Array<LuaDeclaredVar>;
-	
+
+	private var markedLabels:Map<String, Array<LuaExpr>>;
+	private var mlLabelsRecord:Array<{var n:String; var old:Array<LuaExpr>;}>;
+
 	var binops:Map<String, Dynamic->Dynamic->Dynamic>;
 
 	var curExpr:LuaExpr;
 	var return_value:LuaAndParams;
+	var throw_label:String;
 	var triple_value:LuaAndParams;
 
 	public function new() {
@@ -314,6 +317,8 @@ class LuaInterp {
 
 	public function execute(expr:LuaExpr):Dynamic {
 		locals = new Map();
+		markedLabels = new Map();
+		mlLabelsRecord = new Array();
 		declared = new Array();
 		return this.expr(expr);
 	}
@@ -323,12 +328,13 @@ class LuaInterp {
 			expr(e);
 		} catch(s:LuaStop) {
 			switch (s) {
-				case LuaStop.SBreak:
+				case SBreak:
 					throw "break outside loop";
-				case LuaStop.SContinue:
+				case SContinue:
 					throw "continue outside loop";
-				case LuaStop.SReturn:
+				case SReturn:
 					if(return_value != null) return return_value;
+				case SLabel: //Im not sure it will hanppen.
 			}
 		}
 		return new LuaAndParams();
@@ -500,7 +506,35 @@ class LuaInterp {
 				}
 			case ETd(ae):
 				var old = declared.length;
-				for(e in ae) expr(e);
+				final oldLabels = mlLabelsRecord.length;
+				var labels = [];
+				Lambda.iter(ae, function(e) {
+					switch(e.expr) {
+						case ELabel(id):
+							mlLabelsRecord.push({n: id, old: markedLabels.get(id)});
+							markedLabels.set(id, []);
+							labels.push(id);
+						case _:
+							for(label in labels) {
+								final arr = markedLabels.get(label);
+								if(arr != null) {
+									arr.push(e);
+								}
+							}
+					}
+				});
+				try {
+					for(e in ae) {
+						expr(e);
+					}
+				} catch(e:LuaStop) {
+					switch(e) {
+						case SLabel if(throw_label != null && labels.contains(throw_label)):
+							throw_label = null;
+						case _: throw e;
+					}
+				}
+				restoreLabels(oldLabels);
 				restore(old);
 			case EAnd(sb):
 				var ae = new LuaAndParams();
@@ -616,7 +650,14 @@ class LuaInterp {
 					}
 				}
 				return f;
-			case EIgnore, EGoto(_), ELabel(_):
+			case EGoto(label):
+				if(markedLabels.get(label) == null) error(ECustom("no visible label '" + label + "' for <goto>"));
+				for(e in markedLabels.get(label)) {
+					expr(e);
+				}
+				throw_label = label;
+				throw LuaStop.SLabel;
+			case EIgnore, ELabel(_):
 			case EReturn(e):
 				var v:Dynamic = (e == null ? null : expr(e));
 				if(!isAndParams(v)) {
@@ -911,7 +952,7 @@ class LuaInterp {
 			f();
 		} catch (err:LuaStop) {
 			switch (err) {
-				case SContinue:
+				case SContinue, SLabel:
 				case SBreak:
 					cont = false;
 				case SReturn:
@@ -925,6 +966,13 @@ class LuaInterp {
 		while (declared.length > old) {
 			var d = declared.pop();
 			locals.set(d.n, d.old);
+		}
+	}
+
+	function restoreLabels(old: Int) {
+		while(mlLabelsRecord.length > old) {
+			var m = mlLabelsRecord.pop();
+			markedLabels.set(m.n, m.old);
 		}
 	}
 
