@@ -208,7 +208,7 @@ class LuaInterp {
 			throw message;
 			return null;
 		});
-		globals.set("error", lua_error);
+		globals.set("error", luastd_error);
 		globals.set("pcall", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
 			if(args.length > 0) {
 				var func:Dynamic = null;
@@ -261,11 +261,10 @@ class LuaInterp {
 			if(v.length != null && LuaCheckType.isInteger(v.length)) return v.length;
 			return null;
 		});
-		globals.set("pairs", function(it:Dynamic):KeyValueIterator<Dynamic, Dynamic> {
-			return new LuaTable.LuaTablePairsIterator(LuaCheckType.checkTable(it));
-		});
-		globals.set("ipairs", function(it:Dynamic):KeyValueIterator<Dynamic, Dynamic> {
-			return new LuaTable.LuaTableIpairsIterator(LuaCheckType.checkTable(it));
+		globals.set("next", luastd_next);
+		globals.set("pairs", luastd_pairs);
+		globals.set("ipairs", function(it:Dynamic):LuaAndParams {
+			return LuaAndParams.fromArray([ipairs_fu, it, 0]);
 		});
 		globals.set("setmetatable", function(o:LuaTable<Dynamic>, meta:LuaTable<Dynamic>):LuaTable<Dynamic> {
 			LuaCheckType.checkTable(o).metaTable = LuaCheckType.checkTable(meta);
@@ -709,6 +708,7 @@ class LuaInterp {
 							case _:
 								expr(fl.key);
 						}
+						if(key == null) error(ECustom("table index is nil"));
 						table.set(key, value, false);
 					} else {
 						i++;
@@ -901,16 +901,52 @@ class LuaInterp {
 		}
 	}
 
-	function checkKeyValueIterator(v: Dynamic): KeyValueIterator<Dynamic, Dynamic> {
+	/**
+	 * 点击输入文本
+	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L568
+	 */
+	function makeIterator(v: Dynamic): Iterator<Dynamic> {
+		#if js
+		// don't use try/catch (very slow)
+		if (v is Array)
+			return (v : Array<Dynamic>).iterator();
+		if (v.iterator != null)
+			v = v.iterator();
+		#else
+		try
+			v = v.iterator()
+		catch (e:Dynamic) {};
+		#end
 		if (v.hasNext == null || v.next == null)
 			error(EInvalidIterator(v));
-		return cast v;
+		return v;
 	}
 
-	function checkIterator(v:Dynamic):Iterator<Dynamic> {
+	/**
+	 * 点击输入文本
+	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L581
+	 */
+	function makeKeyValueIterator(v: Dynamic): KeyValueIterator<Dynamic, Dynamic> {
+		#if js
+		// don't use try/catch (very slow)
+		if (v is Array)
+			return (v : Array<Dynamic>).keyValueIterator();
+		if (v.keyValueIterator != null)
+			v = v.keyValueIterator();
+		#else
+		#if cpp
+		// i need convert type to get map's keyValueIterator in cpp. (yeh
+		if (isMap(v)) {
+			v = cast(v, IMap<Dynamic, Dynamic>).keyValueIterator();
+		} else
+		#end
+		try
+			v = v.keyValueIterator()
+		catch (e:Dynamic) {};
+		#end
 		if (v.hasNext == null || v.next == null)
 			error(EInvalidIterator(v));
-		return cast v;
+		return v;
 	}
 
 	/**
@@ -919,24 +955,55 @@ class LuaInterp {
 	 */
 	function forGenLoop(vk, vv, it, e) {
 		var old = declared.length;
-		declared.push({n: vk, old: locals.get(vk)});
-		if(vk != null) {
-			declared.push({n: vv, old: locals.get(vv)});
-			var it = checkKeyValueIterator(expr(it));
-			while (it.hasNext()) {
-				var v = it.next();
-				locals.set(vk, {r: v.key});
-				locals.set(vv, {r: v.value});
-				if (!loopRun(() -> expr(e)))
-					break;
+		var params:Array<Dynamic> = getParams(expr(it));
+		final func = params[0];
+		final isFunc = Reflect.isFunction(func);
+		if(params.length == 1 && !isFunc) {
+			declared.push({n: vk, old: locals.get(vk)});
+			if(vk != null) {
+				declared.push({n: vv, old: locals.get(vv)});
+				var it = makeKeyValueIterator(func);
+				while (it.hasNext()) {
+					var v = it.next();
+					locals.set(vk, {r: v.key});
+					locals.set(vv, {r: v.value});
+					if (!loopRun(() -> expr(e)))
+						break;
+				}
+			} else {
+				var it = makeIterator(func);
+				while (it.hasNext()) {
+					var v = it.next();
+					locals.set(vk, {r: v.value});
+					if (!loopRun(() -> expr(e)))
+						break;
+				}
 			}
 		} else {
-			var it = checkIterator(expr(it));
-			while (it.hasNext()) {
-				var v = it.next();
-				locals.set(vk, {r: v.value});
-				if (!loopRun(() -> expr(e)))
-					break;
+			if(!isFunc) error(EInvalidIterator(null));
+			final state = params[1];
+			var current = params[2];
+			declared.push({n: vk, old: locals.get(vk)});
+			if(vk != null) {
+				declared.push({n: vv, old: locals.get(vv)});
+				var results:Array<Dynamic> = getParams(func(state, current));
+				while (results[1] != null) {
+					current = results[0];
+					locals.set(vk, {r: results[0]});
+					locals.set(vv, {r: results[1]});
+					if (!loopRun(() -> expr(e)))
+						break;
+					results = getParams(func(state, current));
+				}
+			} else {
+				var results:Array<Dynamic> = getParams(func(state, current));
+				while (results[1] != null) {
+					current = results[0];
+					locals.set(vv, {r: results[1]});
+					if (!loopRun(() -> expr(e)))
+						break;
+					results = getParams(func(state, current));
+				}
 			}
 		}
 		restore(old);
@@ -987,12 +1054,41 @@ class LuaInterp {
 		return h2;
 	}
 
-	function lua_error(message:String, ?l:Int) {
-			throw message;
+	static function luastd_error(message:String, ?l:Int) {
+		throw message;
+	}
+
+	static function luastd_pairs(it:Dynamic):LuaAndParams {
+		return LuaAndParams.fromArray([luastd_next, it, null]);
+	}
+
+	static function ipairs_fu(state:LuaTable<Dynamic>, control:Int) {
+		state = LuaCheckType.checkTable(state);
+		control = LuaCheckType.checkInteger(control);
+		control++;
+		final v = state.get(control);
+		if(control < state.nextIndex && v != null) {
+			return LuaAndParams.fromArray([control, v]);
 		}
+		return LuaAndParams.fromArray([null]);
+	}
+
+	static function luastd_next(state:LuaTable<Dynamic>, control:Dynamic) {
+		state = LuaCheckType.checkTable(state);
+		final nextKey = state._keys[(control == null ? -1 : state._keys.indexOf(control)) + 1];
+		if(nextKey != null) {
+			return LuaAndParams.fromArray([nextKey, state.get(nextKey)]);
+		}
+		return LuaAndParams.fromArray([null]);
+	}
 
 	inline function exists(id:String):Bool {
 		return locals.get(id) != null || globals.exists(id);
+	}
+
+	inline function getParams(sb:Dynamic):Array<Dynamic> {
+		if(sb is LuaAndParams) return cast(sb, LuaAndParams).values;
+		return [sb];
 	}
 
 	public function error(err:LuaErrorDef, ?line:Int):Dynamic {
