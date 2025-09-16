@@ -278,11 +278,12 @@ class LuaTable<V> {
 
 	private function __read(t:LuaTable<Dynamic>, r:Dynamic):Dynamic {
 		if(metaTable != null) {
-			final sb = LuaCheckType.checkType(metaTable.get("__index"));
+			final v:Dynamic = metaTable.get("__index");
+			final sb = LuaCheckType.checkType(v);
 			if(sb == TFUNCTION) {
-				return Reflect.callMethod(t, metaTable.get("__index"), [t, r]);
-			} else if(sb == TTABLE) {
-				return cast(t, LuaTable<Dynamic>).get(r);
+				return Reflect.callMethod(t, v, [t, r]);
+			} else if(!this.keyExists(r) && sb == TTABLE) {
+				return cast(v, LuaTable<Dynamic>).__read(v, r);
 			}
 		}
 		return this.get(r);
@@ -290,12 +291,13 @@ class LuaTable<V> {
 
 	private function __write(t:LuaTable<Dynamic>, r:Dynamic, value:Dynamic):Void {
 		if(metaTable != null) {
-			final sb = LuaCheckType.checkType(metaTable.get("__newindex"));
+			final v:Dynamic = metaTable.get("__newindex");
+			final sb = LuaCheckType.checkType(v);
 			if(sb == TFUNCTION) {
-				Reflect.callMethod(t, metaTable.get("__newindex"), [t, r, value]);
+				Reflect.callMethod(t, v, [t, r, value]);
 				return;
-			} else if(sb == TTABLE) {
-				return cast(t, LuaTable<Dynamic>).set(r, value);
+			} else if(!this.keyExists(r) && sb == TTABLE) {
+				return cast(v, LuaTable<Dynamic>).__write(v, r, value);
 			}
 		}
 		return this.set(r, value);
@@ -307,8 +309,6 @@ class LuaTable<V> {
 			if(sb == TFUNCTION) {
 				args = args ?? [];
 				return Reflect.callMethod(t, metaTable.get("__call"), cast([t], Array<Dynamic>).concat(args));
-			} else if(sb == TTABLE) {
-				return cast(sb, LuaTable<Dynamic>).get("__call");
 			}
 		}
 		return null;
