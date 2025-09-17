@@ -19,11 +19,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@main
 
-      - name: setup dotnet
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
@@ -47,3 +42,29 @@ jobs:
         run: |
           cd tests
           haxe build-${{matrix.build-target}}.hxml
+      
+  Build-Tools:
+    runs-on: "ubuntu-24.04"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.7
+
+      - name: 'dev haxelib:luahscript'
+        run: |
+          haxelib dev luahscript .
+
+      - name: Build
+        run: |
+          cd tools
+          haxe run.hxml
+
+      - name: Upload the run
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'Upload run.n'
+          repository: ./run.n
