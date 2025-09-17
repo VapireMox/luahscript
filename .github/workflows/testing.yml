@@ -64,7 +64,8 @@ jobs:
           haxe run.hxml
           cd ..
 
-      - name: Upload run.n
-        uses: stefanzweifel/git-auto-commit-action@v6
+      - name: Upload Artifact
+        uses: actions/upload-artifact@main
         with:
-          commit_message: 'Upload run.n'
+          name: build_run
+          path: ./run.n
