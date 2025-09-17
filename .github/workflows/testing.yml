@@ -62,8 +62,9 @@ jobs:
         run: |
           cd tools
           haxe run.hxml
+          cd ..
 
-      - name: Upload the run
-        uses: stefanzweifel/git-auto-commit-action@v5
+      - name: Upload run.n
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
           commit_message: 'Upload run.n'
