@@ -358,7 +358,7 @@ class LuaInterp {
 			case EParent(e):
 				return expr(e);
 			case EField(e, f, isDouble):
-				var obj:Dynamic = expr(e);
+				var obj:Dynamic = getParamsFirst(expr(e));
 				if(obj == null) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
@@ -380,13 +380,6 @@ class LuaInterp {
 					error(EInvalidAccess(sb, type));
 				}
 
-				// Special handling for Haxe object property access
-				if (Reflect.isObject(obj) && !Std.isOfType(obj, LuaTable)) {
-					if (Reflect.hasField(obj, f)) {
-						return Reflect.field(obj, f);
-					}
-				}
-				
 				return get(obj, f, isDouble);
 			case ELocal(e):
 				return expr(e, true);
@@ -395,13 +388,13 @@ class LuaInterp {
 					evalAssignOp(e1, e2, isLocal);
 					return null;
 				}
-				final left:Dynamic = expr(e1);
-				final right:Dynamic = expr(e2);
+				final left:Dynamic = getParamsFirst(expr(e1));
+				final right:Dynamic = getParamsFirst(expr(e2));
 				var fop = binops.get(op);
 				if(fop != null) return fop(left, right);
 				return error(EInvalidOp(op));
 			case EPrefix(prefix, e):
-				var v:Dynamic = expr(e);
+				var v:Dynamic = getParamsFirst(expr(e));
 				return switch(prefix) {
 					case "#":
 						if(isMetaTable(v) && v.metaTable.keyExists("__len")) return cast(v, LuaTable<Dynamic>).__len(v);
@@ -433,7 +426,7 @@ class LuaInterp {
 
 				switch(e.expr) {
 					case EField(ef, f, isDouble): // Handles obj:method() and obj.method()
-						var obj:Dynamic = expr(ef);
+						var obj:Dynamic = getParamsFirst(expr(ef));
 						if(obj == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
@@ -479,7 +472,7 @@ class LuaInterp {
 						if (isDouble) args.insert(0, obj);
 						return Reflect.callMethod(null, func, args);
 					case _:
-						var func:Dynamic = expr(e);
+						var func:Dynamic = getParamsFirst(expr(e));
 						if(func == null) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
@@ -665,7 +658,7 @@ class LuaInterp {
 				}
 				throw LuaStop.SReturn;
 			case EArray(e, index):
-				var o:Dynamic = expr(e);
+				var o:Dynamic = getParamsFirst(expr(e));
 				if(o == null) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
@@ -687,25 +680,26 @@ class LuaInterp {
 					error(EInvalidAccess(sb, type));
 				}
 				if(isTable(o)) return cast(o, LuaTable<Dynamic>).__read(o, expr(index));
-				return o[expr(index)];
+				return o[getParamsFirst(expr(index))];
 			case ETable(fls):
 				var table = new LuaTable<Dynamic>();
 				var i = 0;
 				for(fl in fls) {
 					var value = expr(fl.v);
-					if(isAndParams(value)) {
+					if(isAndParams(value) && fl.key == null) {
 						for(i=>v in cast(value, LuaAndParams).values) {
 							table.set(i + 1, v);
 						}
 						break;
 					}
+					value = getParamsFirst(value);
 					if(fl.key != null) {
 						var key:Dynamic = switch(fl.key.expr) {
 							case EIdent(id) if(fl.haveBK != true): 
 								curExpr = fl.key;
 								id;
 							case _:
-								expr(fl.key);
+								getParamsFirst(expr(fl.key));
 						}
 						if(key == null) error(ECustom("table index is nil"));
 						table.set(key, value, false);
@@ -1090,6 +1084,11 @@ class LuaInterp {
 		return [sb];
 	}
 
+	inline function getParamsFirst(sb:Dynamic):Dynamic {
+		if(sb is LuaAndParams) return cast(sb, LuaAndParams).values[0];
+		return sb;
+	}
+
 	public function error(err:LuaErrorDef, ?line:Int):Dynamic {
 		throw new LuaError(err, line ?? (curExpr == null ? 0 : curExpr.line));
 		return null;
@@ -1153,7 +1152,7 @@ class LuaCheckType {
 			case TSTRING: "string";
 			case TTABLE: "table";
 			case TFUNCTION: "function";
-			case _: "invalid";
+			case _: "none";
 		}
 	}
 
