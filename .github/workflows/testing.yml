@@ -44,6 +44,8 @@ jobs:
           haxe build-${{matrix.build-target}}.hxml
       
   Build-Tools:
+    permissions:
+      contents: write
     runs-on: "ubuntu-24.04"
     steps:
       - name: Setup Haxe
@@ -64,8 +66,8 @@ jobs:
           haxe run.hxml
           cd ..
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@main
+      - name: Commit:Upload run.n
+        uses: stefanzweifel/git-auto-commit-action@v6
         with:
-          name: build_run
-          path: ./run.n
+          commit_message: "Upload run.n"
+          file_pattern: "run.n"
