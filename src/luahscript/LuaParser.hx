@@ -162,6 +162,8 @@ class LuaParser {
 							retional = true;
 						case EArray(_, _):
 							retional = true;
+						case ECall(_, _):
+							retional = true;
 						case _:
 					}
 				});

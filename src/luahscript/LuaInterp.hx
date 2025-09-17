@@ -470,7 +470,7 @@ class LuaInterp {
 							error(ECallNilValue(sb, type));
 						}
 						if (isDouble) args.insert(0, obj);
-						return Reflect.callMethod(null, func, args);
+						return if(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call")) cast(func, LuaTable<Dynamic>).__call(func, args); else Reflect.callMethod(null, func, args);
 					case _:
 						var func:Dynamic = getParamsFirst(expr(e));
 						if(func == null) {
@@ -493,7 +493,7 @@ class LuaInterp {
 							});
 							error(ECallNilValue(sb, type));
 						}
-						return Reflect.callMethod(null, func, args);
+						return if(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call")) cast(func, LuaTable<Dynamic>).__call(func, args); else Reflect.callMethod(null, func, args);
 				}
 			case ETd(ae):
 				var old = declared.length;
