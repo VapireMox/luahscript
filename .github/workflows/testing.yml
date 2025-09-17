@@ -46,13 +46,13 @@ jobs:
   Build-Tools:
     runs-on: "ubuntu-24.04"
     steps:
-      - name: Checkout
-        uses: actions/checkout@main
-
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.7
+          
+      - name: Checkout
+        uses: actions/checkout@main
 
       - name: 'dev haxelib:luahscript'
         run: |
