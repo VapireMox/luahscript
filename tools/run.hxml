@@ -1,0 +1,5 @@
+-L luahscript
+-resource .help@help
+-resource ../haxelib.json@haxelib
+-main Main
+-neko ../run.n

@@ -1,0 +1,26 @@
+Haxelib:Luahscript Test-Tools (v${version})
+Usage: luahscript [Command] [Arguments] [Script-File]
+
+Command:
+  - help	Getting For Help.
+    Usage: luahscript (help/--help/-help)
+
+  - run		Running Specified-Path Script. Arguments will be used in Lua script.
+    Usage: luahscript run (Script-file) [Arguments]
+
+  - parse	Detecting Multiple Specified-Path Script Syntax.
+    Usage: luahscript parse (Script-file [Script-file1 Script-file2...])
+
+  - print	Printing Specified-Path Script. The input options will determine the appearance of the printed code. The specified options can be combined and matched.(Except for "--no_waterMark & -o")
+    Usage: luahscript print (Script-file) [Options]
+    Options:
+      --no_waterMark	No watermark added
+
+      --I		Don't need indent during printing.
+      --f		When printing, the code will be consolidated on one line.
+      --t		When printing, indentation is replaced by "\t".
+      --n		During printing, a certain amount of normative adjustments will be made to the code.
+      --s		Need semicolons during printing
+      --i@[number]	Indent the number of space characters.(def is 2)
+
+      -o=[path]		Specify the path of the print output file

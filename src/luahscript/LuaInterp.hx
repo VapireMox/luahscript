@@ -235,11 +235,10 @@ class LuaInterp {
 				if(LuaCheckType.isInteger(v)) {
 					final i:Int = cast v;
 					if(i > 0) {
-						var newArgs:Array<Dynamic> = [];
-						while(args.length > i - 1) {
-							newArgs.push(args.shift());
+						while(args.length > i) {
+							args.shift();
 						}
-						return LuaAndParams.fromArray(newArgs);
+						return LuaAndParams.fromArray(args);
 					}
 				} else if(v == "#") {
 					return LuaAndParams.fromArray([args.length]);
@@ -426,7 +425,7 @@ class LuaInterp {
 							for(value in lap.values) {
 								args.push(value);
 							}
-						} else args.push(null);
+						}
 						continue;
 					}
 					args.push(v);
