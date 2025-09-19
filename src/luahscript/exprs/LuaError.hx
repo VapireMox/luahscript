@@ -1,5 +1,7 @@
 package luahscript.exprs;
 
+import luahscript.LuaInterp;
+
 class LuaError {
 	public var err: LuaErrorDef;
 	public var line: Int;
@@ -17,13 +19,13 @@ class LuaError {
 enum LuaErrorDef
 {
 	EInvalidChar(c:Int);
-	EUnexpected(s:String);
+	EUnexpected(s:String, ?ex:String);
 	EUnterminatedString(char:Int);
 	EUnterminatedComment;
-	ECallNilValue(id:String, type:LuaVariableType);
+	ECallInvalidValue(id:String, type:LuaVariableType, td:LuaTyper);
 	EInvalidOp(op:String);
-	EInvalidIterator(v:Dynamic);
-	EInvalidAccess(f:String, type:LuaVariableType);
+	EInvalidIterator(v:LuaTyper);
+	EInvalidAccess(f:String, type:LuaVariableType, td:LuaTyper);
 	ECustom(msg:String);
 }
 

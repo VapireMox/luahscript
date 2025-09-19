@@ -36,6 +36,10 @@ typedef LuaPrinterConfigure = {
 	 * 印刷水印
 	 */
 	var ?waterMark:Bool;
+	/**
+	 * 用于格式化而非印刷
+	 */
+	var ?format:Bool;
 }
 
 class LuaPrinter {
@@ -77,11 +81,17 @@ class LuaPrinter {
 			add("-- Print by Luahscript. Its very NB!");
 			add("\n");
 		}
-		exprToString(expr);
+		if(this.configure.format && expr.expr.match(EFunction(["..."], _, _))) {
+			LuaTools.iter(expr, function(e) {
+				exprToString(e, true);
+			});
+		} else {
+			exprToString(expr);
+		}
 		return buf.toString();
 	}
 
-	function exprToString(expr:LuaExpr) {
+	function exprToString(expr:LuaExpr, og:Bool = false) {
 		if(expr == null) return add("<<NULL>>");
 		if(expr.expr == null) return add("<<NULL>>");
 		switch(expr.expr) {
@@ -127,20 +137,25 @@ class LuaPrinter {
 				add(")");
 			case ETd(ae, isBlock):
 				if(isBlock == true) add("do");
-				if(!this.configure.focusOneLine) add("\n");
-				else add();
-				increaseIndent();
+				if(!og || isBlock == true) {
+					if(!this.configure.focusOneLine) add("\n");
+					else add();
+				}
+				if(!og || isBlock == true) increaseIndent();
+				var next:LuaExpr = null;
 				for(i=>e in ae) {
-					if(!this.configure.focusOneLine) add(indentCounts);
+					next = ae[i + 1];
+
 					exprToString(e);
 					if(this.configure.semicolon) add(";");
 					if(this.configure.focusOneLine) add();
 					else {
-						add("\n");
+						final doir:Bool = if(this.configure.normative && e != null && next != null) Type.enumConstructor(e.expr) != Type.enumConstructor(next.expr) else false;
+						add("\n" + (i < ae.length - 1 && this.configure.normative && doir ? "\n" : ""));
 					}
 				}
-				originalSimplicityIndent();
-				if(!this.configure.focusOneLine) add(indentCounts);
+				if(!og || isBlock == true) originalSimplicityIndent();
+				if(!og || isBlock == true) if(!this.configure.focusOneLine) add(indentCounts);
 				if(isBlock == true) add("end");
 			case EAnd(ae):
 				for(i=>e in ae) {
@@ -329,19 +344,20 @@ class LuaPrinter {
 			indentSpaceChar: 2,
 			waterMark: true,
 			normative: false,
+			format: false,
 		};
 	}
 
 	public static function errorToString(e: LuaError, showPos: Bool = true) {
 		var message = switch (e.err) {
-			case EInvalidChar(c): "expected char near " + (StringTools.isEof(c) ? "'<\\eof>'" : Std.string(luahscript.LuaParser.inLu(c) ? "'" + String.fromCharCode(c) + "'" : "'<\\" + Std.string(c) + ">'"));
-			case EUnexpected(s): "expected symbol near '" + s + "'";
+			case EInvalidChar(c): "unexpected char near " + (StringTools.isEof(c) ? "'<\\eof>'" : Std.string(luahscript.LuaParser.inLu(c) ? "'" + String.fromCharCode(c) + "'" : "'<\\" + Std.string(c) + ">'"));
+			case EUnexpected(s, ex): (ex != null ? "'" + ex + "'" + " expected symbol near '" + s + "'" : "unexpected symbol near '" + s + "'");
 			case EUnterminatedString(c): "unfinished string near '<\\" + (StringTools.isEof(c) ? "eof" : Std.string(c)) + ">'";
 			case EUnterminatedComment: "unfinished long comment near <eof>";
-			case ECallNilValue(v, type): "attempt to call a nil value" + (type != UNKNOWN ? " (" + type + " '" + v + "')" : "");
+			case ECallInvalidValue(v, type, td): "attempt to call a " + td + " value" + (type != UNKNOWN ? " (" + type + " '" + v + "')" : "");
 			case EInvalidOp(op): "unexpected symbol near '" + op + "'";
-			case EInvalidIterator(v): "attempt to call a invalid value (for iterator)";
-			case EInvalidAccess(f, type): "attempt to index a nil value" + (type != UNKNOWN ? " (" + type + " '" + f + "')" : "");
+			case EInvalidIterator(td): "attempt to call a " + td + " value (for iterator)";
+			case EInvalidAccess(f, type, td): "attempt to index a " + td +" value" + (type != UNKNOWN ? " (" + type + " '" + f + "')" : "");
 			case ECustom(msg): msg;
 			default: "Unknown Error.";
 		};

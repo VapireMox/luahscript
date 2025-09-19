@@ -58,6 +58,10 @@ class Main {
 					configure.waterMark = false;
 					continue;
 				}
+				if(input.toLowerCase() == "formatter") {
+					configure.format = true;
+					continue;
+				}
 				var pos = 0;
 				while(true) {
 					var char = StringTools.fastCodeAt(input, pos++);

@@ -212,7 +212,8 @@ class LuaInterp {
 		globals.set("pcall", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
 			if(args.length > 0) {
 				var func:Dynamic = null;
-				if(LuaCheckType.checkType(func = args.shift()) == TFUNCTION) {
+				final td = LuaCheckType.checkType(func = args.shift());
+				if(td == TFUNCTION) {
 					try {
 						final result = Reflect.callMethod(null, func, args);
 						if(isAndParams(result)) {
@@ -224,7 +225,7 @@ class LuaInterp {
 						return LuaAndParams.fromArray([false, Std.string(e)]);
 					}
 				}
-				return LuaAndParams.fromArray([false, "attempt call a nil value"]);
+				return LuaAndParams.fromArray([false, "attempt to call a " + td + " value"]);
 			}
 			throw "bad argument #1 to pcall";
 			return null;
@@ -359,7 +360,8 @@ class LuaInterp {
 				return expr(e);
 			case EField(e, f, isDouble):
 				var obj:Dynamic = getParamsFirst(expr(e));
-				if(obj == null) {
+				final td = LuaCheckType.checkType(obj);
+				if(td != TTABLE && td != TNONE) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(e, function(e:LuaExpr) {
@@ -377,7 +379,7 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				}
 
 				return get(obj, f, isDouble);
@@ -427,7 +429,8 @@ class LuaInterp {
 				switch(e.expr) {
 					case EField(ef, f, isDouble): // Handles obj:method() and obj.method()
 						var obj:Dynamic = getParamsFirst(expr(ef));
-						if(obj == null) {
+						final td = LuaCheckType.checkType(obj);
+						if(td != TTABLE && td != TNONE) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
 							LuaTools.recursion(ef, function(e:LuaExpr) {
@@ -445,11 +448,12 @@ class LuaInterp {
 										type = UNKNOWN;
 								}
 							});
-							error(EInvalidAccess(sb, type));
+							error(EInvalidAccess(sb, type, td));
 						}
 
 						final func:Dynamic = get(obj, f, isDouble);
-						if(func == null) {
+						final td = LuaCheckType.checkType(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call") ? cast(func, LuaTable<Dynamic>).metaTable.get("__call") : func);
+						if(td != TFUNCTION) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
 							LuaTools.recursion(e, function(e:LuaExpr) {
@@ -467,13 +471,14 @@ class LuaInterp {
 										type = UNKNOWN;
 								}
 							});
-							error(ECallNilValue(sb, type));
+							error(ECallInvalidValue(sb, type, td));
 						}
 						if (isDouble) args.insert(0, obj);
 						return if(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call")) cast(func, LuaTable<Dynamic>).__call(func, args); else Reflect.callMethod(null, func, args);
 					case _:
 						var func:Dynamic = getParamsFirst(expr(e));
-						if(func == null) {
+						final td = LuaCheckType.checkType(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call") ? cast(func, LuaTable<Dynamic>).metaTable.get("__call") : func);
+						if(td != TFUNCTION) {
 							var sb:Null<String> = null;
 							var type:Null<LuaVariableType> = null;
 							LuaTools.recursion(e, function(e:LuaExpr) {
@@ -491,7 +496,7 @@ class LuaInterp {
 										type = UNKNOWN;
 								}
 							});
-							error(ECallNilValue(sb, type));
+							error(ECallInvalidValue(sb, type, td));
 						}
 						return if(isMetaTable(func) && cast(func, LuaTable<Dynamic>).metaTable.keyExists("__call")) cast(func, LuaTable<Dynamic>).__call(func, args); else Reflect.callMethod(null, func, args);
 				}
@@ -596,7 +601,8 @@ class LuaInterp {
 						if(i == 0) {
 							obj = resolve(name);
 						} else {
-							if(obj == null) error(EInvalidAccess(preName, (preName == null ? UNKNOWN : (i > 1 ? FIELD : (locals.get(preName) != null ? LOCAL : GLOBAL)))));
+							final td = LuaCheckType.checkType(obj);
+							if(td != TTABLE && td != TNONE) error(EInvalidAccess(preName, (preName == null ? UNKNOWN : (i > 1 ? FIELD : (locals.get(preName) != null ? LOCAL : GLOBAL))), td));
 							if(i < names.length - 1) obj = get(obj, name, isDouble);
 						}
 						preName = name;
@@ -659,7 +665,8 @@ class LuaInterp {
 				throw LuaStop.SReturn;
 			case EArray(e, index):
 				var o:Dynamic = getParamsFirst(expr(e));
-				if(o == null) {
+				final td = LuaCheckType.checkType(o);
+				if(td != TTABLE && td != TNONE) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(e, function(e:LuaExpr) {
@@ -677,7 +684,7 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				}
 				if(isTable(o)) return cast(o, LuaTable<Dynamic>).__read(o, expr(index));
 				return o[getParamsFirst(expr(index))];
@@ -762,7 +769,8 @@ class LuaInterp {
 			case EField(e, f, isDouble):
 				var ex:Array<Dynamic> = if(isAndParams(e2)) cast(e2, LuaAndParams).values; else [e2];
 				var o:Dynamic = expr(e);
-				if(o == null) {
+				final td = LuaCheckType.checkType(o);
+				if(td != TTABLE && td != TNONE) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(e, function(e:LuaExpr) {
@@ -780,14 +788,16 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				};
 				set(o, f, ex[0], isDouble);
 			case EArray(arr, index):
 				var ex:Array<Dynamic> = if(isAndParams(e2)) cast(e2, LuaAndParams).values; else [e2];
 				var array:Dynamic = expr(arr);
 				var index:Dynamic = expr(index);
-				if(array == null) {
+
+				final td = LuaCheckType.checkType(array);
+				if(td != TTABLE && td != TNONE) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(arr, function(e:LuaExpr) {
@@ -805,7 +815,7 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				}
 				if(isTable(array)) return cast(array, LuaTable<Dynamic>).__write(array, index, ex[0]);
 				array[index] = ex[0];
@@ -841,7 +851,8 @@ class LuaInterp {
 				var ex:Dynamic = expr(e2);
 				var ex:Array<Dynamic> = if(isAndParams(ex)) cast(ex, LuaAndParams).values; else [ex];
 				var o:Dynamic = expr(e);
-				if(o == null) {
+				final td = LuaCheckType.checkType(o);
+				if(td != TTABLE && td != TNONE) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
 					LuaTools.recursion(e, function(e:LuaExpr) {
@@ -859,7 +870,7 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				};
 				set(o, f, ex[0], isDouble);
 			case EArray(arr, index):
@@ -867,6 +878,8 @@ class LuaInterp {
 				var ex:Array<Dynamic> = if(isAndParams(ex)) cast(ex, LuaAndParams).values; else [ex];
 				var array:Dynamic = expr(arr);
 				var index:Dynamic = expr(index);
+
+				final td = LuaCheckType.checkType(array);
 				if(array == null) {
 					var sb:Null<String> = null;
 					var type:Null<LuaVariableType> = null;
@@ -885,7 +898,7 @@ class LuaInterp {
 								type = UNKNOWN;
 						}
 					});
-					error(EInvalidAccess(sb, type));
+					error(EInvalidAccess(sb, type, td));
 				}
 				if(isTable(array)) return cast(array, LuaTable<Dynamic>).__write(array, index, ex[0]);
 				array[index] = ex[0];
@@ -898,7 +911,8 @@ class LuaInterp {
 	 * 点击输入文本
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L568
 	 */
-	function makeIterator(v: Dynamic): Iterator<Dynamic> {
+	function makeIterator(v: Dynamic, td:LuaTyper): Iterator<Dynamic> {
+		if(v == null) error(EInvalidIterator(td));
 		#if js
 		// don't use try/catch (very slow)
 		if (v is Array)
@@ -911,7 +925,7 @@ class LuaInterp {
 		catch (e:Dynamic) {};
 		#end
 		if (v.hasNext == null || v.next == null)
-			error(EInvalidIterator(v));
+			error(EInvalidIterator(td));
 		return v;
 	}
 
@@ -919,7 +933,8 @@ class LuaInterp {
 	 * 点击输入文本
 	 * @see https://github.com/HaxeFoundation/hscript/blob/master/hscript/Interp.hx#L581
 	 */
-	function makeKeyValueIterator(v: Dynamic): KeyValueIterator<Dynamic, Dynamic> {
+	function makeKeyValueIterator(v: Dynamic, td:LuaTyper): KeyValueIterator<Dynamic, Dynamic> {
+		if(v == null) error(EInvalidIterator(td));
 		#if js
 		// don't use try/catch (very slow)
 		if (v is Array)
@@ -938,7 +953,7 @@ class LuaInterp {
 		catch (e:Dynamic) {};
 		#end
 		if (v.hasNext == null || v.next == null)
-			error(EInvalidIterator(v));
+			error(EInvalidIterator(td));
 		return v;
 	}
 
@@ -950,12 +965,12 @@ class LuaInterp {
 		var old = declared.length;
 		var params:Array<Dynamic> = getParams(expr(it));
 		final func = params[0];
-		final isFunc = Reflect.isFunction(func);
-		if(params.length == 1 && !isFunc) {
+		final td = LuaCheckType.checkType(func);
+		if(params.length == 1 && td != TFUNCTION) {
 			declared.push({n: vk, old: locals.get(vk)});
 			if(vk != null) {
 				declared.push({n: vv, old: locals.get(vv)});
-				var it = makeKeyValueIterator(func);
+				var it = makeKeyValueIterator(func, td);
 				while (it.hasNext()) {
 					var v = it.next();
 					locals.set(vk, {r: v.key});
@@ -964,7 +979,7 @@ class LuaInterp {
 						break;
 				}
 			} else {
-				var it = makeIterator(func);
+				var it = makeIterator(func, td);
 				while (it.hasNext()) {
 					var v = it.next();
 					locals.set(vk, {r: v.value});
@@ -973,7 +988,7 @@ class LuaInterp {
 				}
 			}
 		} else {
-			if(!isFunc) error(EInvalidIterator(null));
+			if(td != TFUNCTION) error(EInvalidIterator(td));
 			final state = params[1];
 			var current = params[2];
 			declared.push({n: vk, old: locals.get(vk)});

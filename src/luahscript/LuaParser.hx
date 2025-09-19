@@ -87,12 +87,6 @@ class LuaParser {
 
 	function parseFullExpr( exprs : Array<LuaExpr> ) {
 		var e = parseExpr();
-		var t = token();
-		push(t);
-		if(t.match(TConst(CString(_, _))) || t.match(TBrOpen)) {
-			var arg = parseExpr();
-			e = mk(ECall(e, [arg]));
-		}
 		exprs.push(e);
 
 		var tk = token();
@@ -125,7 +119,7 @@ class LuaParser {
 
 	var assignQuare:Bool;
 	var inObject:Bool;
-	function parseNextExpr(e1:LuaExpr, nonAccess:Bool = false):LuaExpr {
+	function parseNextExpr(e1:LuaExpr, nonAccess:Bool = false, bracket:Bool = false):LuaExpr {
 		var tk = token();
 		switch(tk) {
 			case TOp("=") if(inObject):
@@ -181,8 +175,12 @@ class LuaParser {
 				ensure(TBkClose);
 				return parseNextExpr(mk(EArray(e1,e2)));
 			case _:
-				if(needCall) unexpected(tk);
+				if(needCall) unexpected(tk, TPOpen);
 				push(tk);
+				if(bracket) if(tk.match(TConst(CString(_, _))) || tk.match(TBrOpen)) {
+					var arg = parseExpr();
+					return parseNextExpr(mk(ECall(e1, [arg])));
+				}
 				return e1;
 		}
 	}
@@ -196,12 +194,12 @@ class LuaParser {
 			case TId(id) if(id == "true" || id == "false" || id == "nil"):
 				return parseNextExpr(mk(EIdent(id)));
 			case TId(id) if(getValue && (id == "function" || (!logicOperators.contains(id) && !keywords.contains(id)))):
-				parseNextExpr(parseIdent(id));
+				parseNextExpr(parseIdent(id), false, id != "function");
 			case TId(id) if(!getValue):
 				if(logicOperators.contains(id) || keywords.contains(id)) parseIdent(id);
-				else parseNextExpr(parseIdent(id));
+				else parseNextExpr(parseIdent(id), false, true);
 			case TConst(c):
-				parseNextExpr(mk(EConst(c)), true);
+				parseNextExpr(mk(EConst(c)), true, false);
 			case TPOpen:
 				final oca = commaAnd;
 				commaAnd = true;
@@ -210,12 +208,12 @@ class LuaParser {
 				tk = token();
 				switch( tk ) {
 					case TPClose:
-						return parseNextExpr(mk(EParent(e)));
+						return parseNextExpr(mk(EParent(e)), false, true);
 					case _:
-						unexpected(tk);
+						unexpected(tk, TPClose);
 				}
 			case TOp("..."):
-				parseNextExpr(mk(EConst(CTripleDot)), true);
+				parseNextExpr(mk(EConst(CTripleDot)), true, false);
 			case TOp(op) if(opPriority.get(op) < 0 || op == "-"):
 				if(op == "-") {
 					var e = parseExpr();
@@ -236,7 +234,7 @@ class LuaParser {
 				ensure(TQuadrupleDot);
 				mk(ELabel(label));
 			case TBrOpen:
-				parseObject();
+				parseTable();
 			case _:
 				unexpected(tk);
 		};
@@ -262,7 +260,7 @@ class LuaParser {
 			case TComma if(!tb):
 			default:
 				if( tk == TPClose) break;
-				unexpected(tk);
+				unexpected(tk, (tb ? TPClose : TComma));
 				break;
 			}
 		}
@@ -286,7 +284,7 @@ class LuaParser {
 			case TComma:
 			default:
 				if( tk == etk ) break;
-				unexpected(tk);
+				unexpected(tk, TComma);
 				break;
 			}
 		}
@@ -314,7 +312,7 @@ class LuaParser {
 					push(tk);
 					break;
 				default:
-					unexpected(tk);
+					unexpected(tk, TComma);
 					break;
 			}
 		}
@@ -359,7 +357,7 @@ class LuaParser {
 									push(tk);
 									break;
 								default:
-									unexpected(tk);
+									unexpected(tk, TOp("="));
 									break;
 							}
 						}
@@ -392,11 +390,11 @@ class LuaParser {
 							var t = token();
 							switch(t) {
 								case TId("end"):
-								case _: unexpected(t);
+								case _: unexpected(t, TId("end"));
 							}
 						case TId("end"):
 						case _:
-							unexpected(t);
+							unexpected(t, TId("end"));
 					}
 				}
 				ik(eelseif);
@@ -456,7 +454,7 @@ class LuaParser {
 						case TDoubleDot:
 							ae.push(getIdent());
 							t = token();
-							if(t != TPOpen) unexpected(t);
+							if(t != TPOpen) unexpected(t, TPOpen);
 							push(t);
 							isDouble = true;
 							ik(ae);
@@ -510,7 +508,7 @@ class LuaParser {
 				pre;
 			};
 			if(cond || (cEnd && Type.enumEq(t, TId("end"))) || t == TEof) {
-				if(t == TEof) unexpected(t);
+				if(t == TEof) unexpected(t, TId("end"));
 				if(fudai) push(t);
 				break;
 			}
@@ -521,7 +519,7 @@ class LuaParser {
 		return mk(ETd(ae, isBlock));
 	}
 
-	function parseObject() {
+	function parseTable() {
 		var kvs = [];
 
 		var t = null;
@@ -571,8 +569,8 @@ class LuaParser {
 		return mk(ETable(kvs));
 	}
 
-	function unexpected(t:LuaToken):Dynamic {
-		return error(EUnexpected(tokenString(t)));
+	function unexpected(t:LuaToken, ?ext:LuaToken):Dynamic {
+		return error(EUnexpected(tokenString(t), (ext != null ? tokenString(ext) : null)));
 	}
 
 	function error(err:LuaErrorDef, ?line:Int):Dynamic {
@@ -670,7 +668,7 @@ class LuaParser {
 
 	inline function ensure(tk) {
 		var t = token();
-		if( !Type.enumEq(t, tk) ) unexpected(t);
+		if( !Type.enumEq(t, tk) ) unexpected(t, tk);
 	}
 
 	function maybe(tk) {
@@ -736,7 +734,7 @@ class LuaParser {
 				if(char == "=".code) {
 					TOp("~=");
 				} else {
-					error(EUnexpected(String.fromCharCode(char)));
+					error(EUnexpected(String.fromCharCode(char), "="));
 				}
 			case ">".code:
 				char = readPos();
@@ -998,7 +996,15 @@ class LuaParser {
 		return switch(c) {
 			case CInt(v): Std.string(v);
 			case CFloat(f): Std.string(f);
-			case CString(s, _): s;
+			case CString(s, k): switch(k) {
+				case DoubleQuotes: '"' + s + '"';
+				case SingleQuotes: "'" + s + '"';
+				case SquareBracket(count):
+					var eqbuf = new StringBuf();
+					for(i in 0...count) eqbuf.add("=");
+					final r = eqbuf.toString();
+					"[" + r + "[" + s + "]" + r + "]";
+			};
 			case CTripleDot: "...";
 		}
 	}
