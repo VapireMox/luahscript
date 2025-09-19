@@ -87,6 +87,12 @@ class LuaParser {
 
 	function parseFullExpr( exprs : Array<LuaExpr> ) {
 		var e = parseExpr();
+		var t = token();
+		push(t);
+		if(t.match(TConst(CString(_, _))) || t.match(TBrOpen)) {
+			var arg = parseExpr();
+			e = mk(ECall(e, [arg]));
+		}
 		exprs.push(e);
 
 		var tk = token();
@@ -329,14 +335,6 @@ class LuaParser {
 				}
 
 				mk(EReturn(parseExpr(true)));
-			case "require":
-				var t = token();
-				push(t);
-				if(t.match(TConst(CString(_, _)))) {
-					var arg = parseExpr();
-					return mk(ECall(mk(EIdent("require")), [arg]));
-				}
-				mk(EIdent(id));
 			case "continue":
 				mk(EContinue);
 			case "break":
