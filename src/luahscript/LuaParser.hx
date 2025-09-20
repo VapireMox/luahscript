@@ -695,6 +695,22 @@ class LuaParser {
 					pos--;
 					TOp("=");
 				}
+			case "#".code if(pos == 1):
+				char = readPos();
+				if(char == "!".code) {
+					var buf = new StringBuf();
+					while(true) {
+						char = readPos();
+						if(char == "\n".code || char == "\r".code || StringTools.isEof(char)) {
+							pos--;
+							break;
+						}
+						buf.addChar(char);
+					}
+					return token();
+				}
+				pos--;
+				TOp("#");
 			case "+".code, "*".code, "%".code, "^".code, "#".code:
 				TOp(String.fromCharCode(char));
 			case "-".code:
