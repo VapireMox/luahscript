@@ -321,7 +321,7 @@ class LuaInterp {
 				return LuaAndParams.fromArray([re.values[0] != null ? re.values[0] : true, ":preload:"]);
 			}
 
-			var err:Null<String> = null;
+			var err:String = "module '" + module + "' not found:\n\t" + (preload.keyExists(module) ? preload.get(module) : "no field package.preload['" + module + "'])");
 			for(k=>v in new LuaTable.LuaTableIpairsIterator<Dynamic>(packageTable.get("searchers"))) {
 				final res:LuaAndParams = v(module);
 				if(res.values.length > 1 && LuaCheckType.checkType(res.values[0]) == TFUNCTION) {
@@ -329,9 +329,10 @@ class LuaInterp {
 					loaded.set(module, re.values[0] == null ? true : re.values[0]);
 					return LuaAndParams.fromArray([loaded.get(module), res.values[1]]);
 				} else if(res.values.length == 1 && res.values[0] != null) {
-					throw "module '" + module + "' not found:\n\t" + (preload.keyExists(module) ? preload.get(module) : "no field package.preload['" + module + "'])") + "\n\t" + res.values[0];
+					err += "\n\t" + res.values[0];
 				}
 			}
+			if(err != null) throw err;
 			return LuaAndParams.fromArray([]);
 		}).bind(this.packageTable, _));
 
@@ -491,7 +492,7 @@ class LuaInterp {
 				for(i=>p in params) {
 					var v:Dynamic = expr(p);
 					if(isAndParams(v)) {
-						final lap:LuaAndParams = cast v;
+						final lap:LuaAndParams = cast(v, LuaAndParams);
 						if(lap.values.length > 0) {
 							for(value in lap.values) {
 								args.push(value);

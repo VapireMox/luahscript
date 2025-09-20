@@ -7,6 +7,8 @@ Command:
 
   - run		Running Specified-Path Script. Arguments will be used in Lua script.
     -- Usage: luahscript run (Script-file) [Arguments]
+    -- Options:
+      --supportHaxeClass	use "require" to get haxe class
 
   - parse	Detecting Multiple Specified-Path Script Syntax.
     -- Usage: luahscript parse (Script-file [Script-file1 Script-file2...])

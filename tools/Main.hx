@@ -137,7 +137,19 @@ class Main {
 			Sys.println("luahscript: Invalid Content");
 			return;
 		}
-		new LuaScript(Std.string(args.shift())).execute(args);
+		var shc:Bool = false;
+		for(arg in args) {
+			var emm = ~/^\-\-?([\w@]+)$/;
+			if(emm.match(arg)) {
+				switch(emm.matched(1).toLowerCase()) {
+					case "supporthaxeclass":
+						shc = true;
+						args.remove(arg);
+				}
+			}
+		}
+		var script:LuaScript = new LuaScript(Std.string(args.shift()), shc);
+		script.execute(args);
 	}
 
 	static function help() {
@@ -159,8 +171,15 @@ class LuaScript {
 	private var interp:LuaInterp;
 	private var parser:LuaParser;
 
-	public function new(path:String) {
+	private var haxeClassesInstances:Map<String, haxe.Constraints.Function>;
+
+	var supportHaxeClass:Bool;
+
+	public function new(path:String, supportHaxeClass:Bool = false) {
 		this.path = path;
+		this.supportHaxeClass = supportHaxeClass;
+
+		haxeClassesInstances = new Map();
 
 		interp = initInterp();
 		parser = new LuaParser();
@@ -183,6 +202,7 @@ class LuaScript {
 
 			return LuaAndParams.fromArray([null, errm]);
 		};
+
 		interp.packageAddSearcher(function(packageTable:LuaTable<Dynamic>, module:String):LuaAndParams {
 			module = LuaCheckType.checkString(module);
 			final re:LuaAndParams = packageTable.get("searchpath")(module, packageTable.get("path"));
@@ -210,9 +230,54 @@ class LuaScript {
 					}
 				}
 			}
-			return LuaAndParams.fromArray([]);
+
+			return LuaAndParams.fromArray([null]);
 		});
+		if(supportHaxeClass) {
+			interp.packageAddSearcher(function(packageTable:LuaTable<Dynamic>, module:String):LuaAndParams {
+				module = LuaCheckType.checkString(module);
+				var cl:Class<Dynamic> = Type.resolveClass(module);
+				if(cl != null) {
+					final em = module.lastIndexOf(".");
+					var cls:String = module.substr(em == -1 ? 0 : em + 1);
+					this.registerClass(cls, cl);
+					return LuaAndParams.fromArray([Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+						return LuaAndParams.fromArray([true]);
+					}) , cls]);
+				} else {
+					return LuaAndParams.fromArray(["no haxe-class '" + module + "'"]);
+				}
+
+				return LuaAndParams.fromArray([null]);
+			});
+		}
+
 		return interp;
+	}
+
+	public function registerClass(s:String, cl:Class<Dynamic>) {
+		haxeClassesInstances.set(s, Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+			args.shift();
+			#if neko
+			if (Reflect.hasField(cl, "__new__")) {
+				return Reflect.callMethod(cl, Reflect.field(cl, "__new__"), args);
+			} else {
+			#end
+				return Type.createInstance(cl, args);
+			#if neko
+			}
+			#end
+		}));
+		final classTable = new LuaTable<Dynamic>();
+		classTable.metaTable = new LuaTable<Dynamic>();
+		classTable.metaTable.set("__index", function(t:LuaTable<Dynamic>, index:Dynamic):Dynamic {
+			if(index == "new") return haxeClassesInstances.get(s);
+			return Reflect.getProperty(cl, index);
+		}, false);
+		classTable.metaTable.set("__newindex", function(t:LuaTable<Dynamic>, index:Dynamic, value:Dynamic) {
+			Reflect.setProperty(cl, index, value);
+		});
+		this.interp.globals.set(s, classTable);
 	}
 
 	public function parse(toThrow:Bool = false):LuaExpr {
@@ -248,6 +313,10 @@ class LuaScript {
 			throw e;
 		} catch(e:LuaError) {
 			throw SEError(origin, e);
+		#if LHST_DEBUG
+		} catch(e:haxe.Exception) {
+			throw SEError(origin, new LuaError(ECustom(e.message + e.stack), (interp.curExpr == null ? (fromParse ? parser.line : 0) : interp.curExpr.line)));
+		#end
 		} catch(e:Dynamic) {
 			throw SEError(origin, new LuaError(ECustom(Std.string(e)), (interp.curExpr == null ? (fromParse ? parser.line : 0) : interp.curExpr.line)));
 		}
