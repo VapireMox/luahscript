@@ -326,4 +326,10 @@ print("以_G['field']形式修该global_test1( +1 )")
 _G["global_test1"] = _G["global_test1"] + 1
 print("结果: ", _G["global_test1"])
 print("_G['field']以及_G.field以及原地址field是否相同", _G.global_test1 == global_test1 and _G["global_test1"] == global_test1)
+
+local lh = MyClass.new()
+print('Haxe测试', lh.greeting)
+print('sayhallo', lh.sayHello())
+--后面兼容:字符吧
+--print('sayhallo', lh:sayHello())
 print("=== Lua 语法测试完成 ===")
