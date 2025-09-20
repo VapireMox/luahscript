@@ -375,9 +375,13 @@ class LHScript {
 						var value = Reflect.field(instance, propertyName);
 						// 如果是方法，返回绑定到实例的函数
 						if (Reflect.isFunction(value)) {
-							return function(...args) {
-								return Reflect.callMethod(instance, value, args);
-							};
+							return Reflect.makeVarArgs(function(varArgs:Array<Dynamic>) {
+								var callArgs:Array<Dynamic> = [];
+								if (varArgs != null) {
+									for(a in varArgs) callArgs.push(a);
+								}
+								return Reflect.callMethod(instance, value, callArgs);
+							});
 						}
 						return value;
 					} else {
@@ -385,9 +389,13 @@ class LHScript {
 							var value = Reflect.getProperty(instance, propertyName);
 							// 如果是方法，返回绑定到实例的函数
 							if (Reflect.isFunction(value)) {
-								return function(...args) {
-									return Reflect.callMethod(instance, value, args);
-								};
+								return Reflect.makeVarArgs(function(varArgs:Array<Dynamic>) {
+									var callArgs:Array<Dynamic> = [];
+									if (varArgs != null) {
+										for(a in varArgs) callArgs.push(a);
+									}
+									return Reflect.callMethod(instance, value, callArgs);
+								});
 							}
 							return value;
 						} catch (e:Dynamic) {
@@ -646,5 +654,3 @@ class LHScript {
 		return enableHaxeSyntax;
 	}
 }
-
-
