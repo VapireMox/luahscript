@@ -1,9 +1,6 @@
 package;
 
-// import luahscript.LuaParser;
-// import luahscript.LuaInterp;
 import lhscript.LHScript;
-// import luahscript.exprs.LuaExpr;
 
 class Main {
 	public static function main() {
@@ -18,9 +15,28 @@ class Main {
         interp.setErrorHandler(function(err) {
             trace('LUA ERROR: $err');
         });
+
+		script.setupGlobalClass("MyClass", MyHaxeClass);
 		
 		interp.execute();
 		trace("add(1, 1) " + interp.callFunc("add", [1, 1]));
 		//trace("LUA_ERROR " + interp.onError);
 	}
+}
+
+
+class MyHaxeClass {
+    public var greeting:String;
+
+    public function new(greeting:String = "Hello from Haxe!") {
+        this.greeting = greeting;
+    }
+
+    public function sayHello():String {
+        return greeting;
+    }
+
+    public function add(a:Int, b:Int):Int {
+        return a + b;
+    }
 }
