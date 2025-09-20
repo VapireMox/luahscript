@@ -329,7 +329,7 @@ class LuaInterp {
 					loaded.set(module, re.values[0] == null ? true : re.values[0]);
 					return LuaAndParams.fromArray([loaded.get(module), res.values[1]]);
 				} else if(res.values.length == 1 && res.values[0] != null) {
-					throw "module '" + module + "' not found:\n\t" + (preload.keyExists(module) != null ? preload.get(module) : "no field package.preload['" + module + "'])") + "\n\t" + res.values[0];
+					throw "module '" + module + "' not found:\n\t" + (preload.keyExists(module) ? preload.get(module) : "no field package.preload['" + module + "'])") + "\n\t" + res.values[0];
 				}
 			}
 			return LuaAndParams.fromArray([]);
