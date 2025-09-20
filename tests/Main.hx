@@ -16,7 +16,7 @@ class Main {
             trace('LUA ERROR: $err');
         });
 
-		script.setupGlobalClass("MyClass", MyHaxeClass);
+		interp.setupGlobalClass("MyClass", MyHaxeClass);
 		
 		interp.execute();
 		trace("add(1, 1) " + interp.callFunc("add", [1, 1]));
