@@ -3,6 +3,8 @@ package;
 import luahscript.LuaInterp;
 import luahscript.LuaParser;
 import luahscript.LuaPrinter;
+import luahscript.LuaAndParams;
+import luahscript.LuaTable;
 import luahscript.exprs.LuaError;
 import luahscript.exprs.LuaExpr;
 import sys.io.File;
@@ -18,6 +20,7 @@ class Main {
 
 		final args:Array<String> = Sys.args();
 		final rootPath:String = args.pop();
+		Sys.setCwd(rootPath);
 
 		if(args.length == 0 ) {
 			help();
@@ -121,7 +124,7 @@ class Main {
 			} catch(e:ScriptError) {
 				failed.push(switch(e) {
 					case SEInvalidPath(s, dir): "Invalid Path: cannot open " + "'" + s + "'" + ": " + (dir ? "It's a directory." : "Not Exist this file.");
-					case SEError(e): "Invalid Syntax: " + script.path + ":" + LuaPrinter.errorToString(e);
+					case SEError(path, e): "Invalid Syntax: " + path + ":" + LuaPrinter.errorToString(e);
 				});
 			}
 		}
@@ -159,8 +162,57 @@ class LuaScript {
 	public function new(path:String) {
 		this.path = path;
 
-		interp = new LuaInterp();
+		interp = initInterp();
 		parser = new LuaParser();
+	}
+
+	function initInterp():LuaInterp {
+		var interp = new LuaInterp();
+		interp.searchPathCallback = function(config:String, module:String, rulePaths:String, ?sep:String, ?rep:String):LuaAndParams {
+			module = LuaCheckType.checkString(module);
+			final ass:Array<String> = config.split("\n");
+			var paths:Array<String> = StringTools.replace(LuaCheckType.checkString(rulePaths), (rep != null ? LuaCheckType.checkString(rep) : ass[2]), StringTools.replace(module, ".", "/")).split(sep != null ? LuaCheckType.checkString(sep) : ass[1]);
+
+			var errm = "";
+			for(i=>path in paths) {
+				if(FileSystem.exists(path)) return LuaAndParams.fromArray([path]);
+				if(i > 0) errm += "\t";
+				errm += "no file '" + path + "'";
+				if(i < paths.length - 1) errm += "\n";
+			}
+
+			return LuaAndParams.fromArray([null, errm]);
+		};
+		interp.packageAddSearcher(function(packageTable:LuaTable<Dynamic>, module:String):LuaAndParams {
+			module = LuaCheckType.checkString(module);
+			final re:LuaAndParams = packageTable.get("searchpath")(module, packageTable.get("path"));
+			if(re.values.length > 1) return LuaAndParams.fromArray([re.values[1]]);
+			else if(re.values.length == 1) {
+				final path:String = re.values[0];
+				var starCode:Null<String> = try {
+					File.getContent(path);
+				} catch(e:Dynamic) {
+					throw "error loading module '" + module + "' from file '" + path + "':\n\tcannot read " + path + ": Is a directory";
+					null;
+				}
+				if(starCode != null) {
+					var e:LuaExpr = null;
+					this.run(function() {
+						e = this.parser.parseFromString(starCode);
+					}, true, "error loading module '" + module + "' from file '" + path + "':\n\t" + path);
+
+					if(e != null) {
+						var func:Dynamic = null;
+						this.run(function() {
+							func = interp.execute(e);
+						}, false, "error loading module '" + module + "' from file '" + path + "':\n\t" + path);
+						return LuaAndParams.fromArray([func, path]);
+					}
+				}
+			}
+			return LuaAndParams.fromArray([]);
+		});
+		return interp;
 	}
 
 	public function parse(toThrow:Bool = false):LuaExpr {
@@ -181,20 +233,23 @@ class LuaScript {
 			} catch(e:ScriptError) {
 				Sys.println("luahscript: " + switch(e) {
 					case SEInvalidPath(s, dir): "cannot open " + "'" + s + "'" + ": " + (dir ? "It's a directory." : "Not Exist this file.");
-					case SEError(e): path + ":" + LuaPrinter.errorToString(e);
+					case SEError(path, e): path + ":" + LuaPrinter.errorToString(e);
 				});
 			}
 		}
 		return e;
 	}
 
-	function run(f:Void->Void, fromParse:Bool = false) {
+	function run(f:Void->Void, fromParse:Bool = false, ?origin:String) {
+		origin = origin ?? this.path;
 		try {
 			f();
+		} catch(e:ScriptError) {
+			throw e;
 		} catch(e:LuaError) {
-			throw SEError(e);
+			throw SEError(origin, e);
 		} catch(e:Dynamic) {
-			throw SEError(new LuaError(ECustom(Std.string(e)), (interp.curExpr == null ? (fromParse ? parser.line : 0) : interp.curExpr.line)));
+			throw SEError(origin, new LuaError(ECustom(Std.string(e)), (interp.curExpr == null ? (fromParse ? parser.line : 0) : interp.curExpr.line)));
 		}
 	}
 
@@ -209,7 +264,7 @@ class LuaScript {
 		} catch(e:ScriptError) {
 			Sys.println("luahscript: " + switch(e) {
 				case SEInvalidPath(s, dir): "cannot open " + "'" + s + "'" + ": " + (dir ? "It's a directory." : "Not Exist this file.");
-				case SEError(e): path + ":" + LuaPrinter.errorToString(e);
+				case SEError(path, e): path + ":" + LuaPrinter.errorToString(e);
 			});
 		}
 	}
@@ -217,5 +272,5 @@ class LuaScript {
 
 enum ScriptError {
 	SEInvalidPath(s:String, dir:Bool);
-	SEError(e:LuaError);
+	SEError(path:String, e:LuaError);
 }

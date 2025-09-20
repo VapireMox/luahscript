@@ -284,7 +284,7 @@ class LuaParser {
 			case TComma:
 			default:
 				if( tk == etk ) break;
-				unexpected(tk, TComma);
+				unexpected(tk, etk);
 				break;
 			}
 		}

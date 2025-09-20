@@ -16,7 +16,43 @@ typedef LuaDeclaredVar = {
 }
 
 class LuaInterp {
+	private var packageTable:LuaTable<Dynamic> = LuaTable.fromObject({
+		config: "/\n;\n?\n!\n-\n",
+		preload: new LuaTable<Dynamic>(),
+		loaded: new LuaTable<Dynamic>(),
+		path: "./?.lua;./?/init.lua",
+		cpath: "",
+		searchers: new LuaTable<Dynamic>(),
+
+		searchpath: function(module:String, rulePaths:String, ?sep:String, ?set:String):LuaAndParams {
+			throw "package.searchpath is not support current platform.";
+			return null;
+		},
+		loadlib: function(libPath:String, funcName:String) {
+			throw "package.loadlib is not support current platform.";
+			return null;
+		},
+	});
+
 	public var globals:Map<String, Dynamic>;
+
+	/**
+	 * For lua `package.searchpath`
+	 */
+	public var searchPathCallback(default, set):(String, String, String, ?String, ?String)->LuaAndParams;
+	private inline function set_searchPathCallback(val:(String, String, String, ?String, ?String)->LuaAndParams):(String, String, String, ?String, ?String)->LuaAndParams {
+		this.packageTable.set("searchpath", val.bind(this.packageTable.get("config"), _));
+		return searchPathCallback = val;
+	}
+
+	/**
+	 * For lua `package.loadlib`
+	 */
+	public var loadLibCallback(default, set):String->String->LuaAndParams;
+	private inline function set_loadLibCallback(val:String->String->LuaAndParams):String->String->LuaAndParams {
+		this.packageTable.set("loadlib", val);
+		return loadLibCallback = val;
+	}
 
 	private var locals:Map<String, LuaLocalVar>;
 	private var declared:Array<LuaDeclaredVar>;
@@ -273,9 +309,47 @@ class LuaInterp {
 		globals.set("getmetatable", function(o:LuaTable<Dynamic>):LuaTable<Dynamic> {
 			return LuaCheckType.checkTable(o).metaTable;
 		});
+
+		setPackageTable();
+		globals.set("require", (function(packageTable:LuaTable<Dynamic>, module:String):LuaAndParams {
+			module = LuaCheckType.checkString(module);
+			var loaded:LuaTable<Dynamic> = packageTable.get("loaded");
+			if(loaded.keyExists(module)) return toParams(loaded.get(module));
+			var preload:LuaTable<Dynamic> = packageTable.get("preload");
+			if(LuaCheckType.checkType(preload.get(module)) == TFUNCTION) {
+				final re:LuaAndParams = preload.get(module)(module, ":preload:");
+				return LuaAndParams.fromArray([re.values[0] != null ? re.values[0] : true, ":preload:"]);
+			}
+
+			var err:Null<String> = null;
+			for(k=>v in new LuaTable.LuaTableIpairsIterator<Dynamic>(packageTable.get("searchers"))) {
+				final res:LuaAndParams = v(module);
+				if(res.values.length > 1 && LuaCheckType.checkType(res.values[0]) == TFUNCTION) {
+					final re:LuaAndParams = res.values[0](module, res.values[1]);
+					loaded.set(module, re.values[0] == null ? true : re.values[0]);
+					return LuaAndParams.fromArray([loaded.get(module), res.values[1]]);
+				} else if(res.values.length == 1 && res.values[0] != null) {
+					throw "module '" + module + "' not found:\n\t" + (preload.keyExists(module) != null ? preload.get(module) : "no field package.preload['" + module + "'])") + "\n\t" + res.values[0];
+				}
+			}
+			return LuaAndParams.fromArray([]);
+		}).bind(this.packageTable, _));
+
 		setDownlineG();
 
-		initLuaLibs(globals);
+		initLuaLibs(globals, this);
+	}
+
+	public function packageAddSearcher(v:LuaTable<Dynamic>->String->LuaAndParams):Void {
+		(packageTable.get("searchers"):LuaTable<Dynamic>).push(v.bind(this.packageTable, _));
+	}
+
+	public function packageLoad(s:String, v:Dynamic) {
+		cast(this.packageTable.get("loaded"), LuaTable<Dynamic>).set(s, v);
+	}
+
+	private function setPackageTable() {
+		this.globals.set("package", packageTable);
 	}
 
 	private inline function setDownlineG() {
@@ -292,18 +366,18 @@ class LuaInterp {
 	}
 
 	private static var lualibs = new Map<String, LuaTable<Dynamic>>();
-	public static function initLuaLibs(map:Map<String, Dynamic>) {
+	public static function initLuaLibs(map:Map<String, Dynamic>, ?interp:LuaInterp) {
 		// fw lua lib
-		setLibs(map, "math", luahscript.lualibs.LuaMathLib);
-		setLibs(map, "string", luahscript.lualibs.LuaStringLib);
-		setLibs(map, "table", luahscript.lualibs.LuaTableLib);
-		setLibs(map, "os", luahscript.lualibs.LuaOSLib);
+		setLibs(map, "math", luahscript.lualibs.LuaMathLib, interp);
+		setLibs(map, "string", luahscript.lualibs.LuaStringLib, interp);
+		setLibs(map, "table", luahscript.lualibs.LuaTableLib, interp);
+		setLibs(map, "os", luahscript.lualibs.LuaOSLib, interp);
 		#if sys
-		setLibs(map, "io", luahscript.lualibs.LuaIOLib);
+		setLibs(map, "io", luahscript.lualibs.LuaIOLib, interp);
 		#end
 	}
 
-	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic) {
+	private static function setLibs(map:Map<String, Dynamic>, name:String, value:Dynamic, ?interp:LuaInterp) {
 		value = if(lualibs.exists(name)) {
 			lualibs.get(name);
 		} else {
@@ -311,6 +385,8 @@ class LuaInterp {
 			lualibs.set(name, v);
 			v;
 		}
+
+		if(interp != null) interp.packageLoad(name, value);
 		map.set(name, value);
 	}
 
@@ -1101,6 +1177,11 @@ class LuaInterp {
 
 	inline function getParamsFirst(sb:Dynamic):Dynamic {
 		if(sb is LuaAndParams) return cast(sb, LuaAndParams).values[0];
+		return sb;
+	}
+
+	inline function toParams(sb:Dynamic):LuaAndParams {
+		if(sb is LuaAndParams) return cast sb;
 		return sb;
 	}
 
