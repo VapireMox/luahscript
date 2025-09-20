@@ -5,10 +5,9 @@ import luahscript.LuaTable;
 import luahscript.LuaTools;
 import luahscript.LuaParser;
 import luahscript.exprs.LuaExpr;
+import luahscript.LuaAndParams;
+import haxe.Constraints.IMap;
 
-/**
- * Lua script parser
- */
 @:access(luahscript.LuaInterp)
 class LHScript {
 	public var interp:LuaInterp;
@@ -50,16 +49,14 @@ class LHScript {
 		
 		this.enableHaxeSyntax = true;
 		this.originalScriptContent = null;
-		
 		if (scriptContent != null) {
 			this.originalScriptContent = scriptContent;
 			this.scriptContent = scriptContent;
 		}
+		initCustomFunctionHandling();
 	}
 	
-	/**
-	 * Load Lua script from file path
-	 */
+
 	public static function fromFile(path:String):LHScript {
 		#if openfl
 		var content = openfl.Assets.getText(path);
@@ -71,57 +68,43 @@ class LHScript {
 		return new LHScript(content);
 	}
 	
-	/**
-	 * Create Lua script from string
-	 */
+
 	public static function fromString(content:String):LHScript {
 		return new LHScript(content);
 	}
 	
-	/**
-	 * Set variable in Lua environment
-	 * Supports Haxe syntax conversion for string values
-	 */
+
 	public function setVar(name:String, value:Dynamic):Void {
 		interp.globals.set(name, value);
 	}
 	
-	/**
-	 * Convert Haxe syntax to Lua syntax
-	 */
+
 	private function convertHaxeToLua(code:String):String {
-		// Convert hex numbers
 		code = ~/0x([0-9a-fA-F]+)/g.replace(code, "tonumber('0x$1', 16)");
-		
-		// Convert method calls
-		// object.method() -> object:method()
 		code = ~/(\w+)\.(\w+)\s*\(([^)]*)\)/g.replace(code, "$1:$2($3)");
-		
 		return code;
 	}
 	
 
-	public function setErrorHandler(callback:String->Void):Void
+	public function setErrorHandler(callback:String->Void):Void {
 		onError = callback;
+	}
 
 	public function setPrintHandler(callback:Int->String->Void):Void {
 		onPrint = callback;
-		// Override print function in Lua
 		interp.globals.set("print", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
 			var buf = new StringBuf();
 			for(i=>arg in args) {
 				buf.add(Std.string(arg));
 				if(i < args.length - 1) buf.add("\t");
 			}
-			if (onPrint != null) 
+			if (onPrint != null) {
 				onPrint((interp.curExpr != null ? interp.curExpr.line : 0) , buf.toString());
+			}
 		}));
 	}
 	
-	/**
-	 * Set parent object
-	 * @param parent The parent object to set
-	 */
+
 	public function setParent(parent:Dynamic):Void {
 		this.parent = parent;
 	}
@@ -146,14 +129,10 @@ class LHScript {
 		if (scriptContent != null) {
 			var expr = parser.parseFromString(scriptContent);
 			interp.execute(expr)();
-		} else {
-			trace("LHScript: No script content to execute");
 		}
 	}
 	
-	/**
-	 * Call Lua function
-	 */
+
 	public function callFunc(funcName:String, ?args:Array<Dynamic>):Dynamic {
 		if (args == null) args = [];
 		
@@ -178,14 +157,12 @@ class LHScript {
 		} catch (e:Dynamic) {
 			if (onError != null) {
 				onError("Lua error (" + funcName + "): " + Std.string(e));
-			} else {
-				trace("Lua error (" + funcName + "): " + e);
 			}
 			return "FUNC_CONT";
 		}
 	}
 	
-	//不常用
+
 	public function callMultipleFunctions(funcNames:Array<String>, ?argsArray:Array<Array<Dynamic>> = null):Array<Dynamic> {
 		var results:Array<Dynamic> = [];
 		
@@ -201,8 +178,6 @@ class LHScript {
 			} catch (e:Dynamic) {
 				if (onError != null) {
 					onError("Lua error (calling multiple functions - " + funcName + "): " + Std.string(e));
-				} else {
-					trace("Lua error (calling multiple functions - " + funcName + "): " + e);
 				}
 				results.push("FUNC_CONT");
 			}
@@ -211,7 +186,7 @@ class LHScript {
 		return results;
 	}
 	
-	//不常用
+
 	public function callFuncG(prefix:String, ?args:Array<Dynamic> = null):Array<Dynamic> {
 		var results:Array<Dynamic> = [];
 		var matchedFunctions:Array<String> = [];
@@ -235,8 +210,6 @@ class LHScript {
 			} catch (e:Dynamic) {
 				if (onError != null) {
 					onError("Lua error (calling functions by prefix - " + funcName + "): " + Std.string(e));
-				} else {
-					trace("Lua error (calling functions by prefix - " + funcName + "): " + e);
 				}
 				results.push("FUNC_CONT");
 			}
@@ -255,8 +228,6 @@ class LHScript {
 			} catch (e:Dynamic) {
 				if (onError != null) {
 					onError("Lua error (batch function call - " + call.funcName + "): " + Std.string(e));
-				} else {
-					trace("Lua error (batch function call - " + call.funcName + "): " + e);
 				}
 				results.push("FUNC_CONT");
 			}
@@ -282,15 +253,13 @@ class LHScript {
 		} catch (e:Dynamic) {
 			if (onError != null) {
 				onError("Lua error: " + Std.string(e));
-			} else {
-				trace("Lua error: " + e);
 			}
 			return null;
 		}
 	}
 
 	function initVar():Void {
-		//重写，别resolve("main")了
+
 	}
 
 	public function clear():Void {
@@ -351,6 +320,308 @@ class LHScript {
 	inline function set_parent(newParent:Dynamic):Dynamic {
 		return scriptObject.parent = newParent;
 	}
+	
+
+	public function handleHaxeClassInstantiation(obj:Dynamic, methodName:String, args:Array<Dynamic>):Dynamic {
+
+		if (methodName == "new") {
+			var haxeClass:Class<Dynamic> = null;
+			if (Std.isOfType(obj, Class)) {
+				haxeClass = cast obj;
+			} else {
+				var className:String = null;
+				if (Std.isOfType(obj, String)) {
+					className = cast obj;
+				} else {
+					if (obj != null) {
+						var objClass = Type.getClass(obj);
+						if (objClass != null) {
+							className = Type.getClassName(objClass);
+						}
+					}
+				}
+
+				if (className != null) {
+					haxeClass = haxeClasses.get(className);
+				if (haxeClass == null) {
+					haxeClass = Type.resolveClass(className);
+				}
+				}
+				
+				if (haxeClass == null) {
+					throw "Attempt to call 'new' on an object that is not a recognized class or type: " + Std.string(obj) + " (resolved class name: " + (className != null ? className : "null") + ")";
+				}
+			}
+			
+			try {
+				var instance:Dynamic = null;
+				#if neko
+				if (Reflect.hasField(haxeClass, "__new__")) {
+					instance = Reflect.callMethod(haxeClass, Reflect.field(haxeClass, "__new__"), args);
+				} else {
+				#end
+				instance = Type.createInstance(haxeClass, args);
+				#if neko
+				}
+				#end
+				
+				var instanceWrapper = new luahscript.LuaTable<Dynamic>();
+				
+				// 创建元表来存储元方法
+				var metaTable = new luahscript.LuaTable<Dynamic>();
+				metaTable.set("__index", function(table:Dynamic, propertyName:String):Dynamic {
+					// 尝试获取实例对象的属性或方法
+					if (Reflect.hasField(instance, propertyName)) {
+						var value = Reflect.field(instance, propertyName);
+						// 如果是方法，返回绑定到实例的函数
+						if (Reflect.isFunction(value)) {
+							return function(...args) {
+								return Reflect.callMethod(instance, value, args);
+							};
+						}
+						return value;
+					} else {
+						try {
+							var value = Reflect.getProperty(instance, propertyName);
+							// 如果是方法，返回绑定到实例的函数
+							if (Reflect.isFunction(value)) {
+								return function(...args) {
+									return Reflect.callMethod(instance, value, args);
+								};
+							}
+							return value;
+						} catch (e:Dynamic) {
+							return null;
+						}
+					}
+				});
+
+				metaTable.set("__newindex", function(table:Dynamic, propertyName:String, value:Dynamic):Void {
+					Reflect.setProperty(instance, propertyName, value);
+				});
+
+				// 设置实例包装器的元表
+				instanceWrapper.metaTable = metaTable;
+				
+				// 也存储实例引用在包装器中
+				instanceWrapper.set("__instance", instance);
+				
+				return instanceWrapper;
+			} catch (err:haxe.Exception) {
+				throw "Failed to instantiate class " + Type.getClassName(haxeClass) + ": " + Std.string(err);
+			}
+		}
+		
+		return null;
+	}
+	
+
+	public function handleMethodCall(obj:Dynamic, methodName:String, args:Array<Dynamic>, isDoubleColon:Bool):Dynamic {
+
+		var instantiationResult = handleHaxeClassInstantiation(obj, methodName, args);
+		if (instantiationResult != null) {
+			return instantiationResult;
+		}
+		
+		var isClassObject = false;
+		if (Std.isOfType(obj, luahscript.LuaTable)) {
+			var table = cast(obj, luahscript.LuaTable<Dynamic>);
+			if (table.metaTable != null && table.metaTable.keyExists("__call")) {
+				isClassObject = true;
+			}
+		}
+
+		if (isDoubleColon && !isClassObject) {
+			args.insert(0, obj);
+		}
+		
+
+		var method:Dynamic = null;
+		if (Reflect.isObject(obj) && !Std.isOfType(obj, luahscript.LuaTable)) {
+			if (Reflect.hasField(obj, methodName)) {
+				method = Reflect.field(obj, methodName);
+			} else {
+
+				try {
+					method = Reflect.getProperty(obj, methodName);
+				} catch (e:Dynamic) {
+
+					method = null;
+				}
+			}
+		}
+		
+		if (method != null && Reflect.isFunction(method)) {
+			try {
+				return Reflect.callMethod(obj, method, args);
+			} catch (e:haxe.Exception) {
+				throw "Error calling method '" + methodName + "': " + Std.string(e);
+			}
+		}
+		
+
+		if (Std.isOfType(obj, luahscript.LuaTable)) {
+			method = cast(obj, luahscript.LuaTable<Dynamic>).get(methodName);
+			if (method != null && Reflect.isFunction(method)) {
+				return Reflect.callMethod(null, method, args);
+			}
+		}
+		
+		throw "Method '" + methodName + "' not found on object: " + Std.string(obj);
+	}
+	
+
+	public function callFunction(funcExpr:Dynamic, ?args:Array<Dynamic>):Dynamic {
+		if (args == null) args = [];
+		
+		if (Std.isOfType(funcExpr, String)) {
+			return callFunc(cast funcExpr, args);
+		} else if (Reflect.isObject(funcExpr)) {
+			if (Reflect.hasField(funcExpr, "obj") && Reflect.hasField(funcExpr, "field")) {
+				var obj = Reflect.field(funcExpr, "obj");
+				var field = Reflect.field(funcExpr, "field");
+				var isDoubleColon = Reflect.hasField(funcExpr, "isDouble") ? Reflect.field(funcExpr, "isDouble") : false;
+				
+				try {
+					return handleMethodCall(obj, field, args, isDoubleColon);
+				} catch (e:Dynamic) {
+					if (onError != null) {
+						onError("Error in enhanced function call: " + Std.string(e));
+					}
+					return null;
+				}
+			}
+		}
+		if (Reflect.isFunction(funcExpr)) {
+			try {
+				return Reflect.callMethod(null, funcExpr, args);
+			} catch (e:Dynamic) {
+				if (onError != null) {
+					onError("Error calling function: " + Std.string(e));
+				}
+				return null;
+			}
+		}
+		
+		return null;
+	}
+	
+
+	private function initCustomFunctionHandling():Void {
+		var originalCallFunc = interp.globals.get("call");
+		
+		interp.globals.set("call", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+			if (args.length >= 2) {
+				var funcExpr = args[0];
+				var callArgs = args.slice(1);
+				
+				var result = callFunction(funcExpr, callArgs);
+				if (result != null) {
+					return result;
+				}
+			}
+			
+			if (originalCallFunc != null && Reflect.isFunction(originalCallFunc)) {
+				return Reflect.callMethod(null, originalCallFunc, args);
+			}
+			return null;
+		}));
+		
+		var originalPcall = interp.globals.get("pcall");
+		interp.globals.set("pcall", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+			if (args.length >= 1) {
+				var funcExpr = args[0];
+				var callArgs = args.slice(1);
+				
+				try {
+					var result = callFunction(funcExpr, callArgs);
+					return luahscript.LuaAndParams.fromArray([true, result]);
+				} catch (e:Dynamic) {
+					return luahscript.LuaAndParams.fromArray([false, Std.string(e)]);
+				}
+			}
+			if (originalPcall != null && Reflect.isFunction(originalPcall)) {
+				return Reflect.callMethod(null, originalPcall, args);
+			}
+			return luahscript.LuaAndParams.fromArray([false, "bad argument #1 to pcall"]);
+	}));
+		
+		interp.globals.set("__call", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
+			if (args.length >= 2) {
+				var obj = args[0];
+				var methodName = args[1];
+				var callArgs = args.slice(2);
+				
+				if (Reflect.isObject(obj) && Reflect.hasField(obj, "__call")) {
+					var __call = Reflect.field(obj, "__call");
+					if (Reflect.isFunction(__call)) {
+						return Reflect.callMethod(obj, __call, [methodName, callArgs]);
+					}
+				}
+			}
+			return null;
+		}));
+	}
+	
+
+	public function createMethodCall(obj:Dynamic, methodName:String, isDoubleColon:Bool = false):Dynamic {
+		return {
+			obj: obj,
+			field: methodName,
+			isDouble: isDoubleColon
+		};
+	}
+	
+
+	public function setupGlobalClass(luaName:String, haxeClass:Class<Dynamic>):Void {
+		// Register the class in the haxeClasses map
+		LHScript.registerHaxeClass(luaName, haxeClass);
+		LHScript.registerHaxeClass(Type.getClassName(haxeClass), haxeClass);
+		
+		var classWrapper = new luahscript.LuaTable<Dynamic>();
+		
+		classWrapper.set("new", function() {
+			var result = handleHaxeClassInstantiation(haxeClass, "new", []);
+			return result;
+		});
+		
+		classWrapper.set("__call", function(obj:Dynamic, methodName:String, ...args:Array<Dynamic>) {
+			if (methodName == "new") {
+				var finalArgs:Array<Dynamic> = args;
+				if (args.length > 0 && args[0] == obj) {
+					finalArgs = [];
+					for (i in 1...args.length) {
+						finalArgs.push(args[i]);
+					}
+				}
+				return handleHaxeClassInstantiation(haxeClass, "new", finalArgs);
+			}
+			return null;
+		});
+		
+		classWrapper.set("__index", function(methodName:String):Dynamic {
+			if (methodName == "new") {
+				return function(...args) {
+					var finalArgs:Array<Dynamic> = args;
+					if (args.length > 0 && args[0] == classWrapper) {
+						finalArgs = [];
+						for (i in 1...args.length) {
+							finalArgs.push(args[i]);
+						}
+					}
+					return handleHaxeClassInstantiation(haxeClass, "new", finalArgs);
+				};
+			}
+			return classWrapper.get(methodName);
+		});
+		
+		classWrapper.set("__len", function() {
+			return 0;
+		});
+		
+		interp.globals.set(luaName, classWrapper);
+	}
+	
 	
 	private function processScriptContent(content:String):String {
 		if (content == null) return null;
