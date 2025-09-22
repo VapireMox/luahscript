@@ -25,11 +25,12 @@ class LuaInterp {
 		searchers: new LuaTable<Dynamic>(),
 
 		searchpath: function(module:String, rulePaths:String, ?sep:String, ?set:String):LuaAndParams {
-			throw "package.searchpath is not support current platform.";
+			if (module == null) throw "bad argument #1 to 'searchpath' (string expected, got nil)";
 			return null;
 		},
 		loadlib: function(libPath:String, funcName:String) {
-			throw "package.loadlib is not support current platform.";
+			if (libPath == null) throw "bad argument #1 to 'loadlib' (string expected, got nil)";
+			if (funcName == null) throw "bad argument #2 to 'loadlib' (string expected, got nil)";
 			return null;
 		},
 	});
