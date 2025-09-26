@@ -234,7 +234,7 @@ class LuaParser {
 				ensure(TQuadrupleDot);
 				mk(ELabel(label));
 			case TBrOpen:
-				parseTable();
+				parseNextExpr(parseTable());
 			case _:
 				unexpected(tk);
 		};
