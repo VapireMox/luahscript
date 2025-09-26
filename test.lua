@@ -331,6 +331,6 @@ local lh = MyClass.new()
 print('Haxe测试', lh.greeting)
 print('sayhallo', lh.sayHello())
 --后面兼容:字符吧
---兼容个锤子，luahscript的大跌是haxe
+--兼容个锤子，luahscript的大跌是haxe 什么叫:方法在lua继承 （
 --print('sayhallo', lh:sayHello())
 print("=== Lua 语法测试完成 ===")
