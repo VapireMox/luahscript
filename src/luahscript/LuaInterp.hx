@@ -240,49 +240,43 @@ class LuaInterp {
 		globals.set("tonumber", function(v:Dynamic, ?base:Int) {
 			return Lua_tonumber.tonumber(v, base);
 		});
-		globals.set("assert", function(v:Dynamic, ?message:String) {
-			if(LuaTools.luaBool(v)) return v;
-			throw message;
-			return null;
+		globals.set("assert", function(v:Dynamic, message:String = "assertion failed!") {
+			if(!LuaTools.luaBool(v)) throw message;
+			return v;
 		});
 		globals.set("error", luastd_error);
 		globals.set("pcall", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
-			if(args.length > 0) {
-				var func:Dynamic = null;
-				final td = LuaCheckType.checkType(func = args.shift());
-				if(td == TFUNCTION) {
-					try {
-						final result = Reflect.callMethod(null, func, args);
-						if(isAndParams(result)) {
-							return LuaAndParams.fromArray([true].concat(result.values));
-						} else {
-							return LuaAndParams.fromArray([true, result]);
-						}
-					} catch(e) {
-						return LuaAndParams.fromArray([false, Std.string(e)]);
+			if(args.length == 0) throw "bad argument #1 to pcall";
+			var func:Dynamic = null;
+			final td = LuaCheckType.checkType(func = args.shift());
+			if(td == TFUNCTION) {
+				try {
+					final result = Reflect.callMethod(null, func, args);
+					if(isAndParams(result)) {
+						return LuaAndParams.fromArray([true].concat(result.values));
+					} else {
+						return LuaAndParams.fromArray([true, result]);
 					}
+				} catch(e) {
+					return LuaAndParams.fromArray([false, Std.string(e)]);
 				}
-				return LuaAndParams.fromArray([false, "attempt to call a " + td + " value"]);
 			}
-			throw "bad argument #1 to pcall";
-			return null;
+			return LuaAndParams.fromArray([false, "attempt to call a " + td + " value"]);
 		}));
-		globals.set("select", Reflect.makeVarArgs(function(args:Array<Dynamic>) {
-			if(args.length > 0) {
-				var v = args.shift();
-				if(LuaCheckType.isInteger(v)) {
-					final i:Int = cast v;
-					if(i > 0) {
-						while(args.length > i) {
-							args.shift();
-						}
-						return LuaAndParams.fromArray(args);
+		globals.set("select", Reflect.makeVarArgs(function(args:Array<Dynamic>):LuaAndParams {
+			if(args.length == 0) throw "bad argument #1 to select";
+			var v = args.shift();
+			if(LuaCheckType.isInteger(v)) {
+				final i:Int = cast v;
+				if(i > 0) {
+					while(args.length > i) {
+						args.shift();
 					}
-				} else if(v == "#") {
-					return LuaAndParams.fromArray([args.length]);
+					return LuaAndParams.fromArray(args);
 				}
-			}
-			throw "bad argument #1 to select";
+			} else if(v == "#") {
+				return LuaAndParams.fromArray([args.length]);
+			} else throw "bad argument #1 to select";
 			return null;
 		}));
 		globals.set("rawequal", function(v1:Dynamic, v2:Dynamic):Bool {
@@ -402,7 +396,15 @@ class LuaInterp {
 
 	function exprReturn(e:LuaExpr):LuaAndParams {
 		try {
-			expr(e);
+			try {
+				expr(e);
+			} catch(e:LuaError) {
+				throw e;
+			} catch(s:LuaStop) {
+				throw s;
+			} catch(e) {
+				this.error(ECustom(Std.string(e)));
+			}
 		} catch(s:LuaStop) {
 			switch (s) {
 				case SBreak:

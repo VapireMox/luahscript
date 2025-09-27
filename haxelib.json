@@ -1,9 +1,9 @@
 {
 	"name": "luahscript",
 	"description": "use hscript expression to make lua script",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"tags": ["hscript", "lua", "scripting"],
-	"releasenote": "Completion rate of 92.5%(maybe), fix some issues, add about 'os', 'io' lua-libs",
+	"releasenote": "I cannot guarantee that it will be restored very well, but I will do my best",
 	"classPath": "src",
 	"license": "Apache",
 	"url": "https://github.com/VapireMox/luahscript",

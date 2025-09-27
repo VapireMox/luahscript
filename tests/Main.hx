@@ -1,31 +1,26 @@
 package;
 
-import lhscript.LHScript;
+import luahscript.LuaInterp;
+import luahscript.LuaParser;
+import luahscript.exprs.*;
+import luahscript.exprs.LuaExpr;
 
 class Main {
 	public static function main() {
 		var input:String = haxe.Resource.getString("test.lua");
-		var interp = new LHScript(input);
 
-		//自选两个 不过可以更好的处理print
-	    interp.setPrintHandler(function(line, msg) {
-            trace('LUA PRINT[$line]: $msg');
-        });
-        
-        interp.setErrorHandler(function(err) {
-            trace('LUA ERROR: $err');
-        });
+		var parser = new LuaParser();
+		var interp = new LuaInterp();
 
-		interp.setupGlobalClass("MyClass", MyHaxeClass);
-		
-		interp.execute();
-		trace("add(1, 1) " + interp.callFunc("add", [1, 1]));
-		//trace("LUA_ERROR " + interp.onError);
+		final func = interp.execute(parser.parseFromString(input));
+
+		// input args
+		func("apple", "banana");
 	}
 }
 
 
-class MyHaxeClass {
+/*class MyHaxeClass {
     public var greeting:String;
 
     public function new(greeting:String = "Hello from Haxe!") {
@@ -40,3 +35,4 @@ class MyHaxeClass {
         return a + b;
     }
 }
+*/

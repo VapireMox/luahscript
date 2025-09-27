@@ -4,6 +4,7 @@ import luahscript.LuaInterp;
 import luahscript.LuaTable;
 
 @:build(luahscript.macros.LuaLibMacro.build())
+@:noCompletion
 class LuaCoroutineLib {
   private static var nextCoroutineId = 0;
   

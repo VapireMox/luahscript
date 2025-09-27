@@ -30,37 +30,29 @@ haxelib git luahscript https://github.com/VapireMox/luahscript
 Here's a simple example showing how to parse and execute a Lua script:
 
 ```haxe
-import lhscript.LHScript;
+import luahscript.LuaInterp;
+import luahscript.LuaParser;
+import luahscript.exprs.LuaExpr;
+import luahscript.LuaAndParams;
 
-class TestLHScript {
-    public static function main() {
-        // Define a simple Lua script
-        var luaScript = '
-            function greet(name)
-                return "Hello, " .. name .. "!"
-            end
-            
-            return greet("World")
-        ';
-        
-        // Create an interpreter and execute the script
-        var interp = new LHScript(luaScript);
-        interp.execute();
-        
-        // Execute the returned function and trace the result
-        // NOTE: The function from Lua are usually 'luahscript.LuaAndParams'. if want to obtain its value, call the "values" field, pls.
-        trace(interp.callFunc("greet", ['World'])); // Output: Hello, World!
-    }
+class Main {
+	public static function main() {
+		var input:String = 'local apple, banana = ...; return apple .. " and " .. banana';
+
+		var interp = new LuaInterp();
+		var parser = new LuaParser();
+
+		final e:LuaExpr = parser.parseFromString(input);
+		// Get A Function By Default.
+		final func = interp.execute(e);
+
+		// You can input paramters for function and will return result what the class "LuaAndParams" by default.
+		final result:LuaAndParams = cast func("apple", "banana");
+		trace(result.values[0]); // apple and banana
+	}
 }
+
 ```
-
-## Documentation
-
-- [Complete Documentation](https://github.com/VapireMox/luahscript/blob/master/DOCUMENTATION.md)
-
-## Usage Examples
-
-For more usage examples, please refer to the [tests directory](./tests).(No completion!)
 
 ## Contributing
 
